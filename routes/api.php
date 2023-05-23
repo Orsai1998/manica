@@ -17,3 +17,11 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+Route::controller(App\Http\Controllers\Auth\AuthController::class)->group(function(){
+    Route::post('otp/generate', 'generate')->name('otp.generate');
+    Route::post('otp/login', 'loginWithOtp')->name('otp.getlogin');
+
+});
+
+
