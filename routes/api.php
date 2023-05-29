@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function(){
 });
 
 Route::get('/apartment',  [App\Http\Controllers\ApartmentController::class, 'getApartmentInfo']);
+Route::get('/apartment_feedbacks',  [App\Http\Controllers\ApartmentController::class, 'getMoreFeedbacks']);
 
 Route::group(['prefix'=>'filter'], function(){
     Route::get('/apartment_types',  [App\Http\Controllers\ApartmentController::class, 'getApartmentTypes']);

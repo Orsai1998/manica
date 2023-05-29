@@ -28,6 +28,10 @@ class Apartment extends Model
         return $this->hasMany(ApartmentFeedback::class);
     }
 
+    public function getRateCountByRate($rate){
+        return $this->feedbacks()->where('rate', $rate)->count();
+    }
+
     public function rate(){
         return $this->feedbacks()->average('rate');
     }

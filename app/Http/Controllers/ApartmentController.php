@@ -8,6 +8,7 @@ use App\Http\Resources\ApartmentTypeResource;
 use App\Http\Resources\LivingConditionResource;
 use App\Http\Resources\ResidentialComplexResource;
 use App\Models\Apartment;
+use App\Models\ApartmentFeedback;
 use App\Models\ApartmentType;
 use App\Models\LivingCondition;
 use App\Models\ResidentialComplex;
@@ -67,6 +68,33 @@ class ApartmentController extends Controller
                 'message'=> 'Apartment not found'
             ]);
         }
+        return ApartmentDetailResource::collection($apartment);
+
+    }
+
+    public function getMoreFeedbacks(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            'apartment_id' => 'required | exists:apartments, id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+        $apartment = Apartment::find($request->input('apartment_id'));
+
+
+        if(!$apartment){
+            return response()->json([
+                'success'=>false,
+                'message'=> 'Apartment does not have feedbacks'
+            ]);
+        }
+
         return ApartmentDetailResource::collection($apartment);
 
     }

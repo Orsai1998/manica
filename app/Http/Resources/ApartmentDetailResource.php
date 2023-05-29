@@ -24,7 +24,7 @@ class ApartmentDetailResource extends ResourceCollection
             'price' => $this->price,
             'is_favourite' => 0,
             'rate' => $this->rate,
-            'rateCount' => $this->feedbacks->count(),
+            'feedbackCount' => $this->feedbacks->count(),
             'description' => $this->description,
             'living_conditions' => LivingConditionResource::collection($this->living_conditions),
             'feedbacks' => ApartmentFeedbackResource::collection($this->feedbacks),
