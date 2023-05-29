@@ -10,6 +10,12 @@ class VerificationCode extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'user_id',
+        'phone_number',
+        'code'
+    ];
+
     public function sendSMS($receiverNumber)
     {
         $message = "Login OTP is ".$this->otp;

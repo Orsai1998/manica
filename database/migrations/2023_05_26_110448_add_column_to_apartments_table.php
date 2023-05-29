@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateVerificationCodesTable extends Migration
+class AddColumnToApartmentsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,11 +13,9 @@ class CreateVerificationCodesTable extends Migration
      */
     public function up()
     {
-        Schema::create('verification_codes', function (Blueprint $table) {
-            $table->id();
-            $table->string('phone');
-            $table->string('code')->unique();
-            $table->timestamps();
+        Schema::table('apartments', function (Blueprint $table) {
+            $table->bigInteger('residential_complex_id')->after('flat');
+            $table->integer('room_number')->after('residential_complex_id');
         });
     }
 
@@ -28,6 +26,8 @@ class CreateVerificationCodesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('verification_codes');
+        Schema::table('apartments', function (Blueprint $table) {
+            //
+        });
     }
 }

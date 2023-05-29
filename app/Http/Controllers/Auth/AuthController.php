@@ -15,7 +15,7 @@ class AuthController extends Controller
 {
     public function sendOtp(Request $request)
     {
-        /* Validate Data */
+
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|exists:users,phone_number'
         ]);
@@ -26,7 +26,7 @@ class AuthController extends Controller
                 'error_msg'=>$validator->errors()
             ]);
         }
-        /* Generate An OTP */
+
         $userOtp = $this->generateOtp($request->phone_number);
         //$userOtp->sendSMS($request->phone_number);
 
@@ -40,8 +40,6 @@ class AuthController extends Controller
     public function generateOtp($phone_number)
     {
         $user = User::where('phone_number', $phone_number)->first();
-
-        /* User Does not Have Any Existing OTP */
         $userOtp = VerificationCode::where('user_id', $user->id)->latest()->first();
 
         $now = now();
@@ -50,7 +48,6 @@ class AuthController extends Controller
             return $userOtp;
         }
 
-        /* Create a New OTP */
         return VerificationCode::create([
             'user_id' => $user->id,
             'otp' => rand(123456, 999999),
@@ -60,7 +57,7 @@ class AuthController extends Controller
 
     public function loginWithOtp(Request $request)
     {
-        /* Validation */
+
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|exists:users,phone_number',
             'otp' => 'required'
@@ -73,7 +70,7 @@ class AuthController extends Controller
             ]);
         }
 
-        /* Validation Logic */
+
         $userOtp = VerificationCode::where('phone_number', $request->phone_number)->where('otp', $request->otp)->first();
 
         $now = now();

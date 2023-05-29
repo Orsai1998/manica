@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateVerificationCodesTable extends Migration
+class AddColumnsToUsersTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,11 +13,10 @@ class CreateVerificationCodesTable extends Migration
      */
     public function up()
     {
-        Schema::create('verification_codes', function (Blueprint $table) {
-            $table->id();
-            $table->string('phone');
-            $table->string('code')->unique();
-            $table->timestamps();
+        Schema::table('users', function (Blueprint $table) {
+            $table->tinyInteger('isFemale')->nullable();
+            $table->date('birth_date')->nullable();
+            $table->string('avatar')->nullable();
         });
     }
 
@@ -28,6 +27,8 @@ class CreateVerificationCodesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('verification_codes');
+        Schema::table('users', function (Blueprint $table) {
+            //
+        });
     }
 }
