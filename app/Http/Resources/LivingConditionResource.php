@@ -2,9 +2,10 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
 
-class LivingConditionResource extends ResourceCollection
+
+class LivingConditionResource extends JsonResource
 {
     /**
      * Transform the resource collection into an array.

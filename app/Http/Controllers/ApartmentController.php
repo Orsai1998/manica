@@ -62,12 +62,6 @@ class ApartmentController extends Controller
 
         $apartment = Apartment::find($request->input('apartment_id'));
 
-        if(!$apartment){
-            return response()->json([
-                'success'=>false,
-                'message'=> 'Apartment not found'
-            ]);
-        }
         return ApartmentDetailResource::collection($apartment);
 
     }
@@ -86,14 +80,6 @@ class ApartmentController extends Controller
         }
 
         $apartment = Apartment::find($request->input('apartment_id'));
-
-
-        if(!$apartment){
-            return response()->json([
-                'success'=>false,
-                'message'=> 'Apartment does not have feedbacks'
-            ]);
-        }
 
         return ApartmentDetailResource::collection($apartment);
 

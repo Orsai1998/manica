@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\ResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
 
-class ApartmentDetailResource extends ResourceCollection
+class ApartmentDetailResource extends JsonResource
 {
     /**
      * Transform the resource collection into an array.
@@ -17,6 +17,7 @@ class ApartmentDetailResource extends ResourceCollection
         return [
             'id' => $this->id,
             'photos' => $this->photos,
+            'area' => $this->area,
             'residential_complex_name' => $this->residential_complex->name,
             'organization_name' => $this->residential_complex->organization->name,
             'room_number' => $this->room_numbber,

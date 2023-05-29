@@ -13,10 +13,10 @@ class CreateApartmentsTypesTable extends Migration
      */
     public function up()
     {
-        Schema::create('apartments_types', function (Blueprint $table) {
+        Schema::create('apartment_types', function (Blueprint $table) {
             $table->id();
-            $table->integer('name');
-            $table->integer('code')->nullable();
+            $table->string('name');
+            $table->string('code')->nullable();
             $table->timestamps();
         });
     }
