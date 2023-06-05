@@ -14,9 +14,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+
 
 Route::controller(App\Http\Controllers\Auth\AuthController::class)->group(function(){
     Route::post('otp/generate', 'generate')->name('otp.generate');
@@ -30,6 +28,8 @@ Route::controller(App\Http\Controllers\Auth\SignUpController::class)->group(func
 });
 
 Route::middleware('auth:sanctum')->group(function(){
+    Route::post('user', [App\Http\Controllers\UserController::class, 'index'])->name('index');
+    Route::post('/user/update', [App\Http\Controllers\UserController::class, 'update'])->name('update');
     Route::post('signup', [App\Http\Controllers\Auth\SignUpController::class, 'signUp'])->name('signUp');
 });
 
