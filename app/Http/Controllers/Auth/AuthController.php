@@ -32,7 +32,7 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => 'true',
-            'Код отправлен'
+            'message'=> 'Код отправлен '.$userOtp->code
         ]);
     }
 
@@ -50,7 +50,8 @@ class AuthController extends Controller
 
         return VerificationCode::create([
             'user_id' => $user->id,
-            'otp' => rand(123456, 999999),
+            'phone_number' => $phone_number,
+            'code' => rand(1000, 9999),
             'expire_at' => $now->addMinutes(1000)
         ]);
     }
@@ -60,30 +61,30 @@ class AuthController extends Controller
 
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|exists:users,phone_number',
-            'otp' => 'required'
+            'code' => 'required'
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success'=>false,
-                'error_msg'=>$validator->errors()
+                'message'=>$validator->errors()
             ]);
         }
 
 
-        $userOtp = VerificationCode::where('phone_number', $request->phone_number)->where('otp', $request->otp)->first();
+        $userOtp = VerificationCode::where('phone_number', $request->phone_number)->where('code', $request->code)->first();
 
         $now = now();
         if (!$userOtp) {
 
             return response()->json([
                 'success' => 'false',
-                'Введенный код не верен'
+                'message'=> 'Введенный код не верен'
             ]);
         }else if($userOtp && $now->isAfter($userOtp->expire_at)){
             return response()->json([
                 'success' => 'false',
-                'Введенный код просрочен'
+                'message'=>  'Введенный код просрочен'
             ]);
         }
 
@@ -99,7 +100,7 @@ class AuthController extends Controller
         }
         return response()->json([
             'success' => false,
-            'Пользователь не найден'
+            'message'=> 'Пользователь не найден'
         ]);
     }
 

@@ -7,9 +7,11 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserDocument;
 use App\Models\VerificationCode;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use function now;
@@ -27,7 +29,7 @@ class SignUpController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success'=>false,
-                'error_msg'=>$validator->errors()
+                'message'=>$validator->errors()
             ]);
         }
 
@@ -41,7 +43,7 @@ class SignUpController extends Controller
 
         return response()->json([
             'success' => 'true',
-            'Код отправлен'
+            'message'=> 'Код отправлен '.$userOtp->code
         ]);
     }
 
@@ -128,39 +130,45 @@ class SignUpController extends Controller
             ]);
         }
 
-
-        if ($request->hasFile('documents')) {
-
-            $avatar = $request->file('avatar');
-            $avatarFileName = $avatar->getClientOriginalName();
-            $avatarPath = $avatar->storeAs('avatar', $avatarFileName, 'public');
-
-            foreach ($request->file('documents') as $image) {
-                $fileName = $image->getClientOriginalName();
-                $path = $image->storeAs('documents', $fileName, 'public');
-
-                UserDocument::create([
-                    'user_id' => $user->id,
-                    'path' => $path
-                ]);
+        try {
+            if($request->hasFile('avatar')){
+                $avatar = $request->file('avatar');
+                $avatarFileName = $avatar->getClientOriginalName();
+                $avatarPath = $avatar->storeAs('avatar', $avatarFileName, 'public');
 
                 if(!empty($avatarPath)){
                     $user->avatar = $avatarPath;
                 }
 
-                $user->name = $request->input('name');
-                $user->isFemale = $request->input('isFemale');
-                $user->birth_date = $request->input('isFemale');
-                $user->save();
-
-                return response()->json([ 'success'=> true], 200);
             }
-        }else {
-            return response()->json([ 'success'=> false, 'message' => 'Documents was not uploaded'], 400);
+            if ($request->hasFile('documents')) {
 
+                foreach ($request->file('documents') as $image) {
+                    $fileName = $image->getClientOriginalName();
+                    $path = $image->storeAs('documents', $fileName, 'public');
+
+                    UserDocument::create([
+                        'user_id' => $user->id,
+                        'path' => $path
+                    ]);
+
+                }
+            }else {
+                return response()->json([ 'success'=> false, 'message' => 'Documents was not uploaded'], 400);
+
+            }
+
+            $user->name = $request->input('name');
+            $user->isFemale = $request->input('isFemale');
+            $user->birth_date = Carbon::createFromDate($request->input('birth_date'))->format("y.m.d");
+            $user->save();
+
+            return response()->json([ 'success'=> true], 200);
+
+        } catch (\Exception $exception){
+            DB::rollBack();
+            return response()->json([ 'success'=> false, 'message' => $exception->getMessage()], 400);
         }
-
-        return response()->json([ 'success'=> false, 'message' => 'User not found'], 400);
     }
 
 

@@ -21,6 +21,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::controller(App\Http\Controllers\Auth\AuthController::class)->group(function(){
     Route::post('otp/generate', 'generate')->name('otp.generate');
     Route::post('otp/login', 'loginWithOtp')->name('otp.getlogin');
+    Route::post('otp/send', 'sendOtp')->name('otp.send');
 });
 
 Route::controller(App\Http\Controllers\Auth\SignUpController::class)->group(function(){
