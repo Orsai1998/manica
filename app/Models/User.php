@@ -46,4 +46,10 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+
+    public function payment_cards(){
+
+        return $this->hasMany(UserPaymentCard::class, 'user_id');
+    }
 }

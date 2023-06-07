@@ -94,6 +94,13 @@ return [
                 'stream' => 'php://stderr',
             ],
         ],
+        'interpay-error' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/interpay-error.log'),
+            'level' => 'debug',
+            'days' => 90,
+            'ignore_exceptions' => false,
+        ],
 
         'syslog' => [
             'driver' => 'syslog',

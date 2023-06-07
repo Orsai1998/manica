@@ -3,10 +3,8 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Response;
 
-class UserResource extends JsonResource
+class UserPaymentCardResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -18,12 +16,8 @@ class UserResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'avatar' =>  asset('storage/'.$this->avatar),
-            'name' => $this->name,
-            'isFemale' => $this->isFemale,
-            'birth_date' => $this->birth_date,
-            'cards' => UserPaymentCardResource::collection($this->payment_cards)
+            'last_digits' =>  $this->last_digits,
+            'exp_date' => $this->exp_date,
         ];
     }
-
 }

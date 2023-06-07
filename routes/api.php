@@ -28,9 +28,14 @@ Route::controller(App\Http\Controllers\Auth\SignUpController::class)->group(func
 });
 
 Route::middleware('auth:sanctum')->group(function(){
-    Route::post('user', [App\Http\Controllers\UserController::class, 'index'])->name('index');
+    Route::get('user', [App\Http\Controllers\UserController::class, 'index'])->name('index');
     Route::post('/user/update', [App\Http\Controllers\UserController::class, 'update'])->name('update');
     Route::post('signup', [App\Http\Controllers\Auth\SignUpController::class, 'signUp'])->name('signUp');
+
+    Route::group(['prefix'=>'booking'], function(){
+        Route::post('/create',  [App\Http\Controllers\BookingController::class, 'create']);
+
+    });
 });
 
 Route::get('/apartment',  [App\Http\Controllers\ApartmentController::class, 'getApartmentInfo']);
@@ -42,3 +47,4 @@ Route::group(['prefix'=>'filter'], function(){
     Route::get('/residential_complexes',  [App\Http\Controllers\ApartmentController::class, 'getResidentialComplexes']);
     Route::get('/living_conditions',  [App\Http\Controllers\ApartmentController::class, 'getLivingConditions']);
 });
+

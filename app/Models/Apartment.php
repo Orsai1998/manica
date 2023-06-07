@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Apartment extends Model
 {
     use HasFactory;
-
+    protected $guarded = [];
+    protected $table = 'apartments';
 
 
     public function residential_complex(){

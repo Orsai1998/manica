@@ -30,4 +30,11 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'interpay' => [
+        'email' => env('INTERPAY_EMAIL', 'arenaa2012@mail.ru'),
+        'apiKey' => env('INTERPAY_API_KEY', '18D33336-6D5A-4F00-804B-170FB11FE160'),
+        'create_payment_url' => env('INTERPAY_CREATE_PAYMENT_URL', '18D33336-6D5A-4F00-804B-170FB11FE160'),
+        'process_payment_url' => env('INTERPAY_PROCESS_PAYMENT_URL', '18D33336-6D5A-4F00-804B-170FB11FE160'),
+    ],
+
 ];
