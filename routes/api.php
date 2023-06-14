@@ -35,7 +35,11 @@ Route::middleware('auth:sanctum')->group(function(){
 
     Route::group(['prefix'=>'booking'], function(){
         Route::post('/create',  [App\Http\Controllers\BookingController::class, 'create']);
-
+        Route::post('/pay',  [App\Http\Controllers\BookingController::class, 'pay']);
+    });
+    Route::group(['prefix'=>'company_info'], function(){
+        Route::post('/create',  [App\Http\Controllers\CompanyInfoController::class, 'create']);
+        Route::get('/index',  [App\Http\Controllers\CompanyInfoController::class, 'index']);
     });
 });
 

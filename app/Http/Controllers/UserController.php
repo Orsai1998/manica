@@ -146,7 +146,8 @@ class UserController extends Controller
         if($user){
             DB::beginTransaction();
             try {
-                $userPayment = UserPaymentCard::where('subscription_token', $token)->first();
+                $userPayment = UserPaymentCard::where('subscription_token', $paymentMethod['card']['fingerprint'])
+                    ->where('user_id', $user->id)->first();
 
                 if($userPayment){
                     $this->paymentService->refundPayment($token, 10, "Отмена покупки");
@@ -156,6 +157,7 @@ class UserController extends Controller
                 $userPayment->user_id = $user->id;
                 $userPayment->account = $paymentMethod['account'];
                 $userPayment->subscription_token = $subscription_token;
+                $userPayment->fingerprint = $paymentMethod['card']['fingerprint'];
                 $userPayment->bank = $paymentMethod['card']['bank'];
                 $userPayment->brand = $paymentMethod['card']['brand'];;
                 $userPayment->is_main = count($user->payment_cards) > 0 ? 0 : 1;

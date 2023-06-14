@@ -2,8 +2,10 @@
 
 namespace App\Billing;
 
+use App\Models\Payment;
 use App\Models\UserPaymentCard;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use KassaCom\SDK\Exception\ServerResponse\ResponseException;
@@ -57,29 +59,31 @@ class PaymentGateway
         }
     }
 
-    public function createPayment($amount, $orderId){
+    public function createPayment($amount, $orderId, $description = "", $subscription_token = ""){
 
         $requestArray = [
-
+            "partner_payment_id" => $orderId,
             'order' => [
                 "currency" => "KZT",
                 "amount" => $amount,
-                "description" => "Оплата в приложений MANICA.kz"
+                "description" => $description ?? "Оплата в приложений MANICA.kz"
             ],
 
             'settings' => [
                 "project_id" => "4027",
                 "payment_method" => "card",
-                "success_url" => "http://site.com/?success",
-                "fail_url" => "http://site.com/?fail",
                 'wallet_id' => 8413,
-                'create_subscription' => true
+                'create_subscription' => true,
             ],
             'custom_parameters' => [
                 "order_id" => $orderId
             ],
-
         ];
+
+        if(!empty($subscription_token)){
+            $requestArray['settings']['subscription_token'] = $subscription_token;
+        }
+
         try {
             $createPaymentResponse =  $this->makeRequest('https://api.kassa.com/v1/payment/create', $requestArray);
 
@@ -90,6 +94,7 @@ class PaymentGateway
                     'token' => $createPaymentResponse['token']
                 ];
             }
+            DB::commit();
         } catch (\Exception $e) {
             Log::channel('interpay-error')->error($e);
             throw new \Exception($e->getMessage());
