@@ -40,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function(){
     Route::group(['prefix'=>'company_info'], function(){
         Route::post('/create',  [App\Http\Controllers\CompanyInfoController::class, 'create']);
         Route::get('/index',  [App\Http\Controllers\CompanyInfoController::class, 'index']);
+        Route::post('/delete',  [App\Http\Controllers\CompanyInfoController::class, 'delete']);
     });
 });
 

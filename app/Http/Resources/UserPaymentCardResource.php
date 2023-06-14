@@ -16,8 +16,8 @@ class UserPaymentCardResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'last_digits' =>  $this->last_digits,
-            'exp_date' => $this->exp_date,
+            'account' =>  $this->account,
+            'brand' => $this->brand,
         ];
     }
 }

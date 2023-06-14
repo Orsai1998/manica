@@ -38,7 +38,7 @@ class BookingController extends Controller
             ]);
         }
 
-        if($apartment->is_available == 0){
+        if(!$apartment->is_available){
             return response()->json([
                 'success'=>false,
                 'message'=>'Апартаменты не доступны'
@@ -60,7 +60,7 @@ class BookingController extends Controller
 
         $validator = Validator::make($request->all(), [
             'apartment_id' => 'required | exists:apartments,id',
-            'booking_id' => 'required | exists:bookings,id',
+            'id' => 'required | exists:bookings,id',
             'is_business_trip_reservation' => 'required',
             'number_of_adult' => 'required',
             'number_of_children' => 'required',
@@ -99,7 +99,7 @@ class BookingController extends Controller
 
         try {
             $request->merge(['user_id' => $user->id]);
-            $booking = Booking::find($request->booking_id);
+            $booking = Booking::find($request->id);
 
             $booking->update($request->all());
             $paymentService =  $this->paymentService->createPayment($request->total_sum, $booking->id,

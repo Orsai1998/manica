@@ -29,7 +29,7 @@ class CompanyInfoController extends Controller
             ]);
         }
         $request->merge(['user_id' => $user->id]);
-        CompanyInfo::create([$request->all()]);
+        CompanyInfo::create($request->all());
 
         return response()->json([
             'success' => true
@@ -57,6 +57,28 @@ class CompanyInfoController extends Controller
              'company_info' => $company
         ]);
 
+    }
+
+    public function delete(Request $request){
+        $user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'company_info_id' => 'required | exists:company_infos,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+        $company =  CompanyInfo::find($request->company_info_id);
+
+        $company->delete();
+        return response()->json([
+            'success' => true,
+        ]);
     }
 
 }
