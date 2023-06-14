@@ -2,15 +2,26 @@
 
 namespace App\Http\Controllers;
 
+use App\Billing\PaymentGateway;
 use App\Http\Resources\UserResource;
 use App\Models\UserPaymentCard;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
+
+    protected $paymentService;
+
+    public function __construct(PaymentGateway $paymentService)
+    {
+        $this->paymentService = $paymentService;
+    }
+
 
     public function index() : JsonResource{
 
@@ -76,12 +87,14 @@ class UserController extends Controller
         $user = Auth::user();
 
         $validator = Validator::make($request->all(), [
-            'card_holder' => 'required',
+            'type' => 'required',
             'card_number' => 'required',
-            'card_cvv' => 'required',
-            'card_exp_date' => 'required',
+            'card_year' => 'required',
+            'card_month' => 'required',
+            'card_security' => 'required',
+            'cardholder' => 'required',
         ]);
-
+        $amount = 10;
         if ($validator->fails()) {
             return response()->json([
                 'success'=>false,
@@ -89,17 +102,33 @@ class UserController extends Controller
             ]);
         }
 
-
         try {
-            $payment_card = new UserPaymentCard();
-            $payment_card->user_id = $user->id;
-            $payment_card->last_digits = '8919';
-            $payment_card->token = 'test';
-            $payment_card->exp_date = '11/25';
-            $payment_card->save();
+        $payment =  $this->paymentService->createPayment($amount, "1");
 
+            $token = $payment['token'];
+            $ip = $payment['ip'];
+            $paymentMethod = [
+                'card_number' => $request->card_number,
+                'type' => 'card',
+                'card_year' => $request->card_year,
+                'card_month' => $request->card_month,
+                'card_security' => $request->card_security,
+                'cardholder' => $request->cardholder
+            ];
+            $payment =  $this->paymentService->proceedPayment($token, $ip, $paymentMethod);
+
+            if($payment){
+                 $paymentInfo = $this->paymentService->getPaymentInfo($token);
+                  if($paymentInfo['status'] == 'successful' && $paymentInfo['subscription']['status'] == 'active'){
+                      $this->savePaymentMethod($paymentInfo['payment_method'], $paymentInfo['subscription']['token'], $payment['token']);
+
+                  }
+                return response()->json([
+                   'success' => true
+                ]);
+            }
             return response()->json([
-                'success'=>true,
+                'success'=>false,
             ]);
 
         }catch (\Exception $exception){
@@ -109,6 +138,40 @@ class UserController extends Controller
                 'message'=> $exception->getMessage()
             ]);
         }
+    }
+
+   protected function savePaymentMethod(array $paymentMethod, String $subscription_token, String $token){
+
+        $user = Auth::user();
+        if($user){
+            DB::beginTransaction();
+            try {
+                $userPayment = UserPaymentCard::where('subscription_token', $token)->first();
+
+                if($userPayment){
+                    $this->paymentService->refundPayment($token, 10, "Отмена покупки");
+                    throw new \Exception('Такой метод оплаты уже существует');
+                }
+                $userPayment = new UserPaymentCard();
+                $userPayment->user_id = $user->id;
+                $userPayment->account = $paymentMethod['account'];
+                $userPayment->subscription_token = $subscription_token;
+                $userPayment->bank = $paymentMethod['card']['bank'];
+                $userPayment->brand = $paymentMethod['card']['brand'];;
+                $userPayment->is_main = count($user->payment_cards) > 0 ? 0 : 1;
+                $userPayment->save();
+
+                //Возврат суммы после привязки карты
+                $this->paymentService->refundPayment($token, 10, "Отмена покупки");
+
+              DB::commit();
+            }catch (\Exception $exception){
+                Log::error($exception);
+                DB::rollBack();
+                throw new \Exception($exception->getMessage(). " ".$exception->getCode());
+            }
+        }
+
     }
 
 }

@@ -50,7 +50,7 @@ class ApartmentController extends Controller
     public function getApartmentInfo(Request $request){
 
         $validator = Validator::make($request->all(), [
-            'apartment_id' => 'required | exists:apartments, id',
+            'apartment_id' => 'required | exists:apartments,id',
         ]);
 
         if ($validator->fails()) {
@@ -62,7 +62,7 @@ class ApartmentController extends Controller
 
         $apartment = Apartment::find($request->input('apartment_id'));
 
-        return ApartmentDetailResource::collection($apartment);
+        return new ApartmentDetailResource($apartment);
 
     }
 

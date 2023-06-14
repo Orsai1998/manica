@@ -30,6 +30,7 @@ Route::controller(App\Http\Controllers\Auth\SignUpController::class)->group(func
 Route::middleware('auth:sanctum')->group(function(){
     Route::get('user', [App\Http\Controllers\UserController::class, 'index'])->name('index');
     Route::post('/user/update', [App\Http\Controllers\UserController::class, 'update'])->name('update');
+    Route::post('user/add_card', [App\Http\Controllers\UserController::class, 'addUserPaymentCard']);
     Route::post('signup', [App\Http\Controllers\Auth\SignUpController::class, 'signUp'])->name('signUp');
 
     Route::group(['prefix'=>'booking'], function(){

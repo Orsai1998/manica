@@ -18,7 +18,7 @@ class Apartment extends Model
     }
 
     public function photos() : HasMany{
-        return $this->hasMany(ApartmentPhoto::class);
+        return $this->hasMany(ApartmentPhoto::class,'apartment_id');
     }
 
     public function living_conditions(){
@@ -41,7 +41,7 @@ class Apartment extends Model
        $photo =  $this->photos()->where('is_main', '=','1')->first();
 
        if($photo){
-           return $photo->path;
+           return asset('storage/'.$photo->path);
        }
        return  "";
     }

@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Billing\PaymentGateway;
+use App\Billing\PaymentGatewayWithSDK;
 use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class BookingController extends Controller
@@ -14,7 +15,7 @@ class BookingController extends Controller
 
     protected $paymentService;
 
-    public function __construct(PaymentGateway $paymentService)
+    public function __construct(PaymentGatewayWithSDK $paymentService)
     {
         $this->paymentService = $paymentService;
     }
@@ -47,7 +48,7 @@ class BookingController extends Controller
 
             $booking = Booking::create($request->all());
             $payment =  $this->paymentService->createPayment($request->total_sum, $booking->id);
-
+            Log::info($payment);
             DB::commit();
             return response()->json(['success'=> true, 'payment' => json_encode($payment)]);
 

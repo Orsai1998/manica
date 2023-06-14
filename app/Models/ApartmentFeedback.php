@@ -10,6 +10,7 @@ class ApartmentFeedback extends Model
     use HasFactory;
     protected $guarded = [];
 
+    protected $table = 'apartment_feedbacks';
     public function user(){
         return $this->belongsTo(User::class,'user_id');
     }

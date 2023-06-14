@@ -16,14 +16,14 @@ class ApartmentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'photo' => $this->mainPhoto,
+            'photo' => $this->mainPhoto(),
             'residential_complex_name' => $this->residential_complex->name,
             'organization_name' => $this->residential_complex->organization->name,
-            'room_number' => $this->room_numbber,
+            'room_number' => $this->room_number,
             'flat_number' => $this->flat,
-            'price' => $this->price,
+            'price' => $this->price(),
             'is_favourite' => 0,
-            'rate' => $this->rate
+            'rate' => $this->rate()
         ];
     }
 }

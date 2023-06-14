@@ -16,9 +16,11 @@ class CreateUserPaymentCardsTable extends Migration
         Schema::create('user_payment_cards', function (Blueprint $table) {
             $table->id();
             $table->bigInteger('user_id');
-            $table->string('token');
-            $table->string('last_digits');
-            $table->string('exp_date');
+            $table->string('subscription_token');
+            $table->string('account');
+            $table->string('bank');
+            $table->string('brand');
+            $table->tinyInteger('is_main');
             $table->timestamps();
         });
     }
