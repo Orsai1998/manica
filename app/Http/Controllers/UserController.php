@@ -140,6 +140,30 @@ class UserController extends Controller
         }
     }
 
+    public function deletePaymentCard(Request $request){
+        $user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'card_id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+        $card = UserPaymentCard::where('id',$request->card_id)->where('user_id', $user->id)->first();
+
+        if($card){
+            $card->delete();
+        }
+        return response()->json([
+            'success'=>true,
+        ]);
+
+    }
+
    protected function savePaymentMethod(array $paymentMethod, String $subscription_token, String $token){
 
         $user = Auth::user();

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Auth;
 
 class Apartment extends Model
 {
@@ -35,6 +36,23 @@ class Apartment extends Model
 
     public function rate(){
         return $this->feedbacks()->average('rate');
+    }
+
+    public function favorite(){
+
+        return $this->hasMany(FavoriteApartment::class,'apartment_id');
+    }
+
+    public function is_favorite(){
+        $user = Auth::user();
+
+        if($user){
+            $count = $this->favorite()->where('user_id', $user->id)->count();
+            if($count > 0){
+                return 1;
+            }
+        }
+        return 0;
     }
 
     public function mainPhoto(){

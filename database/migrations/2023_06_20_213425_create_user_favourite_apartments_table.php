@@ -15,6 +15,8 @@ class CreateUserFavouriteApartmentsTable extends Migration
     {
         Schema::create('user_favourite_apartments', function (Blueprint $table) {
             $table->id();
+            $table->bigInteger('user_id');
+            $table->bigInteger('apartment_id');
             $table->timestamps();
         });
     }

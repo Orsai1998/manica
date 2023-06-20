@@ -10,10 +10,12 @@ use App\Http\Resources\ResidentialComplexResource;
 use App\Models\Apartment;
 use App\Models\ApartmentFeedback;
 use App\Models\ApartmentType;
+use App\Models\FavoriteApartment;
 use App\Models\LivingCondition;
 use App\Models\ResidentialComplex;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -70,7 +72,7 @@ class ApartmentController extends Controller
     public function getMoreFeedbacks(Request $request){
 
         $validator = Validator::make($request->all(), [
-            'apartment_id' => 'required | exists:apartments, id',
+            'apartment_id' => 'required | exists:apartments,id',
         ]);
 
         if ($validator->fails()) {
@@ -183,5 +185,36 @@ class ApartmentController extends Controller
                 'message'=> $exception->getMessage()
             ]);
         }
+    }
+
+    public function toggleFavorite(Request  $request){
+        $user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'apartment_id' => 'required | exists:apartments,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+        $favorite = FavoriteApartment::where('apartment_id', $request->apartment_id)->where('user_id', $user->id)->first();
+
+        if($favorite){
+            $favorite->delete();
+        }else{
+            FavoriteApartment::create([
+                'apartment_id' => $request->apartment_id,
+                'user_id' => $user->id,
+            ]);
+
+        }
+
+        return response()->json([
+            'success'=>true,
+        ]);
     }
 }

@@ -14,6 +14,12 @@ class UserBookingsResource extends JsonResource
      */
     public function toArray($request)
     {
-        return parent::toArray($request);
+        return [
+            'booking_id' => $this->id,
+            'photo' => $this->apartments->mainPhoto(),
+            'residential_complex_name' => $this->apartments->residential_complex->name,
+            'entry_date' => $this->entry_date,
+            'departure_date' => $this->departure_date,
+        ];
     }
 }

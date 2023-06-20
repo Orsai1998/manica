@@ -9,4 +9,10 @@ class Booking extends Model
 {
     use HasFactory;
     protected $guarded = [];
+
+
+    public function apartments(){
+
+        return $this->hasOne(Apartment::class,'id');
+    }
 }

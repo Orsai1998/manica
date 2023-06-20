@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Billing\PaymentGateway;
+use App\Http\Resources\UserBookingsResource;
 use App\Models\Apartment;
 use App\Models\Booking;
 use App\Models\CompanyInfo;
 use App\Models\Payment;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -134,6 +137,21 @@ class BookingController extends Controller
 
     }
 
+    public function getUserBookings(Request $request) : JsonResource{
+        $active = $request->active;
+
+        $user = Auth::user();
+        $now = Carbon::now()->format('Y-m-d');
+        if($active){
+            $booking = Booking::where('user_id', $user->id)->where('status','=','PAID')
+                ->whereDate('departure_date','<=',$now)->get();
+        } else{
+            $booking = Booking::where('user_id', $user->id)->where('status','=','PAID')
+                ->whereDate('departure_date','>',$now)->get();
+        }
+
+        return UserBookingsResource::collection($booking);
+    }
 
 
     protected function changeStatusToPaid($booking_id, $payment_id){
