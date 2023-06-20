@@ -14,6 +14,7 @@ use App\Models\LivingCondition;
 use App\Models\ResidentialComplex;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class ApartmentController extends Controller
@@ -83,5 +84,104 @@ class ApartmentController extends Controller
 
         return ApartmentDetailResource::collection($apartment);
 
+    }
+
+
+    public function createUpdateApartmentComplex(Request $request){
+        $validator = Validator::make($request->all(), [
+            'CodeID1' => 'required',
+            'GUID' => 'required',
+            'description' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+        $complex = ResidentialComplex::where('GUID', $request->GUID)->first();
+
+        try {
+            if(!$complex){
+                $complex = new ResidentialComplex();
+            }
+            $complex->GUID = $request->GUID;
+            $complex->name = $request->description;
+            $complex->code = $request->CodeID1;
+            $complex->save();
+
+            Log::info('Apartment complex with GUID '.$request->GUID. ' was created');
+
+            return response()->json([
+                'success'=>true,
+                'id'=>$complex->id
+            ]);
+        }catch (\Exception $exception){
+            Log::error($exception);
+            return response()->json([
+                'success'=>true,
+                'message'=>$exception->getMessage()
+            ]);
+        }
+    }
+
+    public function createUpdateApartment(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            '*.CodeID1' => 'required',
+            '*.GUID' => 'required',
+            '*.apartmentComplex' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+        try {
+            foreach ($request->all() as $item){
+
+                    $currentComplex = ResidentialComplex::where('GUID', $item['apartmentComplex']['GUID'])->first();
+
+                    if($currentComplex){
+
+                        $apartment = Apartment::where('GUID', $item['GUID'])->first();
+                        if(!$apartment){
+                            $apartment = new Apartment();
+                        }
+
+                        $apartment->GUID = $item['GUID'];
+                        $apartment->residential_complex_id = $currentComplex->id;
+                        $apartment->address = $item['address'];
+                        $apartment->description = $item['description'];
+                        $apartment->longitude = $item['Longitude'];
+                        $apartment->latitude = $item['Latitude'];
+                        $apartment->room_number = $item['rooms'];
+                        $apartment->apartment_type_id = 1;
+                        $apartment->save();
+
+
+                        return response()->json([
+                            'success'=>true,
+                            'apartment_id'=> $apartment->id
+                        ]);
+                    }
+
+                return response()->json([
+                    'success'=>false,
+                    'message'=> 'Apartment complex does not exists'
+                ]);
+            }
+        }catch (\Exception $exception){
+            Log::error($exception);
+            return response()->json([
+                'success'=>false,
+                'message'=> $exception->getMessage()
+            ]);
+        }
     }
 }

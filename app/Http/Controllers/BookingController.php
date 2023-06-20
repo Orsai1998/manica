@@ -135,6 +135,7 @@ class BookingController extends Controller
     }
 
 
+
     protected function changeStatusToPaid($booking_id, $payment_id){
 
         $booking = Booking::find($booking_id);

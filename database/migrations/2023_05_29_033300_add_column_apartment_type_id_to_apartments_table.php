@@ -15,6 +15,8 @@ class AddColumnApartmentTypeIdToApartmentsTable extends Migration
     {
         Schema::table('apartments', function (Blueprint $table) {
             $table->bigInteger('apartment_type_id');
+            $table->string('longitude');
+            $table->string('latitude');
         });
     }
 
@@ -30,3 +32,4 @@ class AddColumnApartmentTypeIdToApartmentsTable extends Migration
         });
     }
 }
+

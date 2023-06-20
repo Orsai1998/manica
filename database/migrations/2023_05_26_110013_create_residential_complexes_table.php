@@ -17,7 +17,8 @@ class CreateResidentialComplexesTable extends Migration
             $table->id();
             $table->string('name');
             $table->string('code')->nullable();
-            $table->bigInteger('organization_id');
+            $table->string('GUID')->nullable();
+            $table->bigInteger('organization_id')->nullable();
             $table->timestamps();
         });
     }

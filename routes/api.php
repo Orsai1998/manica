@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function(){
     });
 });
 
+
 Route::get('/apartment',  [App\Http\Controllers\ApartmentController::class, 'getApartmentInfo']);
 Route::get('/apartment_feedbacks',  [App\Http\Controllers\ApartmentController::class, 'getMoreFeedbacks']);
 
@@ -54,3 +55,9 @@ Route::group(['prefix'=>'filter'], function(){
     Route::get('/living_conditions',  [App\Http\Controllers\ApartmentController::class, 'getLivingConditions']);
 });
 
+Route::middleware('auth.basic')->group(function(){
+    Route::group(['prefix'=>'integration'], function(){
+        Route::post('/create_update_apartment_complex',  [App\Http\Controllers\ApartmentController::class, 'createUpdateApartmentComplex']);
+        Route::post('/create_update_apartment',  [App\Http\Controllers\ApartmentController::class, 'createUpdateApartment']);
+    });
+});

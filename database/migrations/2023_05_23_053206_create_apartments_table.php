@@ -16,7 +16,9 @@ class CreateApartmentsTable extends Migration
         Schema::create('apartments', function (Blueprint $table) {
             $table->id();
             $table->string('address');
-            $table->string('flat');
+            $table->string('flat')->nullable();
+            $table->string('GUID')->nullable();
+            $table->string('code')->nullable();
             $table->bigInteger('city_id')->unsigned()->change();
             $table->bigInteger('organization_id')->unsigned()->change();
             $table->longText('description')->nullable();

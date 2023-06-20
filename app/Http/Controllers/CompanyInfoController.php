@@ -15,7 +15,6 @@ class CompanyInfoController extends Controller
         $user = Auth::user();
 
         $validator = Validator::make($request->all(), [
-            'booking_id' => 'required | exists:bookings,id',
             'BIN' => 'required',
             'name' => 'required',
             'email' => 'required',
@@ -39,18 +38,7 @@ class CompanyInfoController extends Controller
     public function index(Request $request){
         $user = Auth::user();
 
-        $validator = Validator::make($request->all(), [
-            'booking_id' => 'required | exists:bookings,id',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success'=>false,
-                'message'=>$validator->errors()
-            ]);
-        }
-
-        $company =  CompanyInfo::where('booking_id', $request->booking_id)->where('user_id', $user->id)->first();
+        $company =  CompanyInfo::where('user_id', $user->id)->first();
 
         return response()->json([
             'success' => true,
