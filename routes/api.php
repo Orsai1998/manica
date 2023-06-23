@@ -38,6 +38,8 @@ Route::middleware('auth:sanctum')->group(function(){
         Route::post('/create',  [App\Http\Controllers\BookingController::class, 'create']);
         Route::post('/pay',  [App\Http\Controllers\BookingController::class, 'pay']);
         Route::get('/get',  [App\Http\Controllers\BookingController::class, 'getUserBookings']);
+        Route::post('/detail',  [App\Http\Controllers\BookingController::class, 'getBookingDetail']);
+        Route::post('/renewal',  [App\Http\Controllers\BookingController::class, 'renewalBooking']);
     });
     Route::group(['prefix'=>'company_info'], function(){
         Route::post('/create',  [App\Http\Controllers\CompanyInfoController::class, 'create']);

@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Billing\PaymentGateway;
+use App\Http\Resources\BookingDetailResource;
 use App\Http\Resources\UserBookingsResource;
 use App\Models\Apartment;
 use App\Models\Booking;
 use App\Models\CompanyInfo;
 use App\Models\Payment;
+use App\Models\User;
+use App\Models\UserPaymentCard;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -15,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class BookingController extends Controller
 {
@@ -103,24 +107,23 @@ class BookingController extends Controller
         try {
             $request->merge(['user_id' => $user->id]);
             $booking = Booking::find($request->id);
+            $user = User::find($user->id);
 
             $booking->update($request->all());
-            $paymentService =  $this->paymentService->createPayment($request->total_sum, $booking->id,
+            $payment = $this->createPayment($user, $userPaymentCard, $booking->id, $request->total_sum);
+
+            $paymentService =  $this->paymentService->createPayment($request->total_sum, $payment->guid,
                 "Оплата брони №".$booking->id." в приложений MANICA.kz",
                 $userPaymentCard->subscription_token);
 
-            $payment = new Payment();
-            $payment->user_id = $user->id;
-            $payment->booking_id = $booking->id;
-            $payment->user_card_id = $userPaymentCard->id;
-            $payment->total_sum = $request->total_sum;
-            $payment->payment_token = $paymentService['token'];
-            $payment->save();
-
+            $payment->setToken($paymentService['token']);
             $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
 
             if($paymentInfo['status'] == 'successful'){
                 $this->changeStatusToPaid($booking->id,$payment->id);
+            }else{
+                Log::info('Статус оплаты брони №'. $booking->id. ' '. $paymentInfo['status']);
+                $this->changeStatusToUnknown($booking->id, $payment->id, $paymentInfo['status']);
             }
 
 
@@ -129,6 +132,7 @@ class BookingController extends Controller
 
         }catch (\Exception $exception){
             DB::rollback();
+            Log::error($exception);
             return response()->json([
                 'success'=>false,
                 'message'=>$exception->getMessage()
@@ -136,6 +140,21 @@ class BookingController extends Controller
         }
 
     }
+
+
+    protected function createPayment(User $user, UserPaymentCard $userPaymentCard, $booking_id, $total_sum){
+        $payment = new Payment();
+        $payment->user_id = $user->id;
+        $payment->booking_id = $booking_id;
+        $payment->user_card_id = $userPaymentCard->id;
+        $payment->total_sum = $total_sum;
+        $payment->payment_token = '';
+        $payment->guid = (string) Str::uuid();
+        $payment->save();
+
+        return $payment;
+    }
+
 
     public function getUserBookings(Request $request) : JsonResource{
         $active = $request->active;
@@ -154,6 +173,89 @@ class BookingController extends Controller
     }
 
 
+    public function getBookingDetail(Request $request){
+        $validator = Validator::make($request->all(), [
+            'booking_id' => 'required | exists:bookings,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+        try {
+            $booking = Booking::find($request->booking_id);
+            return new BookingDetailResource($booking);
+
+        }catch (\Exception $exception){
+
+            return response()->json([
+                'success'=>false,
+                'message'=>$exception->getMessage()
+            ]);
+        }
+
+    }
+
+    public function renewalBooking(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            'booking_id' => 'required | exists:bookings,id',
+            'new_departure_datetime' => 'required|after:'.Carbon::now()->format('Y-m-d H:i:s'),
+            'total_sum' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+        $user = Auth::user();
+        $booking = Booking::find($request->booking_id);
+
+        DB::beginTransaction();
+
+        try {
+            $userPaymentCard = $user->payment_cards->where('is_main','=','1')->first();
+            //Создаем локальный платеж
+            $payment = $this->createPayment($user, $userPaymentCard, $booking->id, $request->total_sum);
+            //Создаем платеж на стороне kassa.com
+            $paymentService =  $this->paymentService->createPayment($request->total_sum, $payment->id,
+                "Оплата продлений брони №".$booking->id." в приложений MANICA.kz",
+                $userPaymentCard->subscription_token);
+            $payment->setToken($paymentService['token']);
+
+            $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
+
+            if($paymentInfo['status'] == 'successful'){
+                $this->changeStatusToPaid($booking->id, $payment->id);
+                $booking->departure_date = $request->new_departure_datetime;
+                $booking->save();
+            }else{
+                Log::info('Статус оплаты брони №'. $booking->id. ' '. $paymentInfo['status']);
+                $this->changeStatusToUnknown($booking->id, $payment->id, $paymentInfo['status']);
+            }
+
+            DB::commit();
+            return response()->json([
+                'success'=>true,
+            ]);
+
+        }catch (\Exception $exception){
+            DB::rollback();
+            Log::error($exception);
+            return response()->json([
+                'success'=>false,
+                'message'=>$exception->getMessage()
+            ]);
+        }
+    }
+
+
     protected function changeStatusToPaid($booking_id, $payment_id){
 
         $booking = Booking::find($booking_id);
@@ -161,6 +263,17 @@ class BookingController extends Controller
 
         $booking->status = 'PAID';
         $payment ->status = 'PAID';
+
+        $booking->save();
+        $payment->save();
+    }
+    protected function changeStatusToUnknown($booking_id, $payment_id, $status){
+
+        $booking = Booking::find($booking_id);
+        $payment = Payment::find($payment_id);
+
+        $booking->status = $status;
+        $payment ->status = $status;
 
         $booking->save();
         $payment->save();

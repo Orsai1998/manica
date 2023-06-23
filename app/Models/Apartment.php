@@ -26,6 +26,10 @@ class Apartment extends Model
         return $this->belongsToMany(LivingCondition::class,'apartment_living_conditions','apartment_id','living_condition_id');
     }
 
+    public function bookings(){
+        return $this->belongsTo(Booking::class,'id','apartment_id');
+    }
+
     public function feedbacks(){
         return $this->hasMany(ApartmentFeedback::class);
     }
@@ -64,7 +68,7 @@ class Apartment extends Model
        return  "";
     }
 
-    public function price(){
-        return 1000;
+    public function prices(){
+        return $this->hasOne(ApartmentPrice::class,'apartment_id', 'id');
     }
 }

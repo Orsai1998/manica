@@ -22,7 +22,7 @@ class ApartmentDetailResource extends JsonResource
             'organization_name' => $this->residential_complex->organization->name,
             'room_number' => $this->room_number,
             'flat_number' => $this->flat,
-            'price' => $this->price(),
+            'price' => $this->prices->price,
             'is_favourite' => 0,
             'rate' => $this->rate(),
             'feedbackCount' => $this->feedbacks->count(),

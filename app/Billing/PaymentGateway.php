@@ -144,6 +144,24 @@ class PaymentGateway
         }
     }
 
+    public function cancelPayment(String $token){
+        if(empty($token)){
+            return '';
+        }
+
+        $requestArray = [
+            'token' => $token,
+        ];
+
+        try {
+            return $this->makeRequest('https://api.kassa.com/v1/payment/cancel', $requestArray);
+
+        }catch (\Exception $exception){
+            Log::channel('interpay-error')->error($exception);
+            throw new \Exception($exception->getMessage(). " ".$exception->getCode());
+        }
+    }
+
     public function getPaymentInfo(String $token){
 
         $requestArray = [

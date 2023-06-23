@@ -13,6 +13,8 @@ use App\Models\ApartmentType;
 use App\Models\FavoriteApartment;
 use App\Models\LivingCondition;
 use App\Models\ResidentialComplex;
+use Carbon\Carbon;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
@@ -37,15 +39,26 @@ class ApartmentController extends Controller
 
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        $apartment_type = $request->input('apartment_type_id');
+        $apartment_type = $request->input('apartment_type_id') ?? 1;
         $adultAmount = $request->input('adult_amount');
         $childrenAmount = $request->input('children_amount');
-        $minPrice = $request->input('min_price');
-        $maxPrice = $request->input('max_price');
+        $minPrice = $request->min_price;
+        $maxPrice = $request->max_price;
         $residential_complex = $request->input('residential_complex_id');
-        $living_comfort = $request->input('living_comfort_id');
 
-        $apartment = Apartment::all();
+
+        $apartment = Apartment::query()->orDoesntHave('bookings')->orWhereHas(
+            'bookings', function ($query) use ($endDate, $startDate) {
+            $query->whereNotBetween('departure_date', [$startDate,$endDate])->where('status', '!=', 'PAID');
+             }
+        )->where('apartment_type_id', $apartment_type)
+            ->whereHas('prices' , function ($query) use ($minPrice, $maxPrice) {
+            $query->where('price','>=', $minPrice)->where('price','<=', $maxPrice);
+        })->when($residential_complex, function ($query, $residential_complex)  {
+            $query->where('residential_complex_id','=' ,$residential_complex);
+        })->get();
+
+
         return ApartmentResource::collection($apartment);
     }
 

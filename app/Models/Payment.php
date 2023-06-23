@@ -9,4 +9,11 @@ class Payment extends Model
 {
     use HasFactory;
     protected $guarded = [];
+
+
+    public function setToken($token){
+
+        $this->payment_token = $token;
+        $this->save();
+    }
 }
