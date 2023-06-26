@@ -42,21 +42,43 @@ class ApartmentController extends Controller
         $apartment_type = $request->input('apartment_type_id') ?? 1;
         $adultAmount = $request->input('adult_amount');
         $childrenAmount = $request->input('children_amount');
-        $minPrice = $request->min_price;
-        $maxPrice = $request->max_price;
+        $sortBy = $request->input('sortBy');
+        $sort = $request->input('sort') ?? 'asc';
+        $minPrice = (integer)$request->min_price;
+        $maxPrice = (integer)$request->max_price;
         $residential_complex = $request->input('residential_complex_id');
 
 
-        $apartment = Apartment::query()->orDoesntHave('bookings')->orWhereHas(
+        if(!$sortBy){
+            $minPrice = 1000;
+            $maxPrice = 1000000;
+            $sortBy = 'apartment_prices.price';
+        }
+        if($sortBy == 'price'){
+            $sortBy = 'apartment_prices.price';
+        }
+
+        if($sortBy == 'newest'){
+            $sortBy = 'apartments.created_at';
+        }
+
+        if($sortBy == 'for_big_family'){
+            $sortBy = 'apartments.room_number';
+            $sort = 'desc';
+        }
+
+        $apartment = Apartment::query()->orDoesntHave('bookings')->orWhereDoesntHave(
             'bookings', function ($query) use ($endDate, $startDate) {
-            $query->whereNotBetween('departure_date', [$startDate,$endDate])->where('status', '!=', 'PAID');
+            $query->whereBetween('departure_date', [$startDate,$endDate])->where('status', '=', 'PAID');
              }
         )->where('apartment_type_id', $apartment_type)
-            ->whereHas('prices' , function ($query) use ($minPrice, $maxPrice) {
-            $query->where('price','>=', $minPrice)->where('price','<=', $maxPrice);
+            ->join('apartment_prices' , function ($join) use ($minPrice, $maxPrice) {
+            $join->on('apartments.id','=','apartment_prices.apartment_id');
+            $join->where('apartment_prices.price','>=', $minPrice);
+            $join->where('apartment_prices.price','<=', $maxPrice);
         })->when($residential_complex, function ($query, $residential_complex)  {
             $query->where('residential_complex_id','=' ,$residential_complex);
-        })->get();
+        })->orderBy($sortBy, $sort)->get();
 
 
         return ApartmentResource::collection($apartment);
@@ -198,6 +220,15 @@ class ApartmentController extends Controller
                 'message'=> $exception->getMessage()
             ]);
         }
+    }
+
+    public function getFavoriteApartments(Request  $request){
+        $user = Auth::user();
+
+        $apartments = Apartment::whereHas('favorites', function($q) use($user){
+            $q->where('user_id', $user->id);
+        })->get();
+        return ApartmentResource::collection($apartments);
     }
 
     public function toggleFavorite(Request  $request){

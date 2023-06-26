@@ -37,4 +37,9 @@ return [
         'process_payment_url' => env('INTERPAY_PROCESS_PAYMENT_URL', '18D33336-6D5A-4F00-804B-170FB11FE160'),
     ],
 
+    'mobizone' => [
+        'api' => env('MOBIZONE_API', 'api.mobizon.kz'),
+        'apiKey' => env('MOBIZONE_API_KEY', 'kz54c513523637a90b177b852684f77022064528d9aeb9ca4a6de8c012b6b7ff0a1819'),
+    ],
+
 ];

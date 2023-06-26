@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "746d1274857916bd8a1de6b67560eaf1",
+    "content-hash": "1997f81c053901c3e56d26a2bf298450",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -1719,6 +1719,62 @@
                 }
             ],
             "time": "2022-04-17T13:12:02+00:00"
+        },
+        {
+            "name": "mobizon/mobizon-php",
+            "version": "2.0.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mobizon/mobizon-php.git",
+                "reference": "0382a6b8b69800ef71d582578eba629baeae409d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mobizon/mobizon-php/zipball/0382a6b8b69800ef71d582578eba629baeae409d",
+                "reference": "0382a6b8b69800ef71d582578eba629baeae409d",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "ext-simplexml": "*",
+                "php": ">=5.3.3"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Mobizon\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ivan Shcherbak",
+                    "email": "Ivan.Shcherbak@mobizon.com",
+                    "homepage": "https://mobizon.com/",
+                    "role": "Developer"
+                }
+            ],
+            "description": "A PHP library for communicating with the Mobizon API. Mobizon is a powerful SMS gateway and online marketing tools.",
+            "homepage": "https://mobizon.com/",
+            "keywords": [
+                "A2P",
+                "api",
+                "gateway",
+                "messaging",
+                "mobizon",
+                "sms"
+            ],
+            "support": {
+                "docs": "https://github.com/mobizon/mobizon-php/blob/master/README.md",
+                "email": "support@mobizon.com",
+                "issues": "https://mobizon.com/contacts",
+                "source": "https://github.com/mobizon/mobizon-php/tree/2.0.3"
+            },
+            "time": "2020-01-13T17:22:32+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -7718,7 +7774,8 @@
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^7.3|^8.0"
+        "php": "^7.3|^8.0",
+        "ext-json": "*"
     },
     "platform-dev": [],
     "plugin-api-version": "2.3.0"

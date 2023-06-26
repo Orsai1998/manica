@@ -23,6 +23,8 @@ class ApartmentDetailResource extends JsonResource
             'room_number' => $this->room_number,
             'flat_number' => $this->flat,
             'price' => $this->prices->price,
+            'longitude' => $this->longitude,
+            'latitude' => $this->latitude,
             'is_favourite' => 0,
             'rate' => $this->rate(),
             'feedbackCount' => $this->feedbacks->count(),

@@ -68,7 +68,11 @@ class Apartment extends Model
        return  "";
     }
 
+    public function favorites(){
+        return $this->belongsTo(FavoriteApartment::class,'id', 'apartment_id');
+    }
+
     public function prices(){
-        return $this->hasOne(ApartmentPrice::class,'apartment_id', 'id');
+        return $this->belongsTo(ApartmentPrice::class,'id', 'apartment_id');
     }
 }

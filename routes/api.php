@@ -47,6 +47,7 @@ Route::middleware('auth:sanctum')->group(function(){
         Route::post('/delete',  [App\Http\Controllers\CompanyInfoController::class, 'delete']);
     });
     Route::post('/apartment/toggle_favorite',  [App\Http\Controllers\ApartmentController::class, 'toggleFavorite']);
+    Route::get('/apartments/favorite',  [App\Http\Controllers\ApartmentController::class, 'getFavoriteApartments']);
 
 });
 

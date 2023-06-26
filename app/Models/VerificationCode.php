@@ -5,6 +5,7 @@ namespace App\Models;
 use http\Client;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class VerificationCode extends Model
 {
@@ -18,20 +19,26 @@ class VerificationCode extends Model
 
     public function sendSMS($receiverNumber)
     {
-        $message = "Login OTP is ".$this->otp;
+        $message = "Login OTP is ".$this->code;
 
         try {
 
-            $account_sid = getenv("MOBIZONE_ACC");
-            $auth_token = getenv("TWILIO_TOKEN");
-            $twilio_number = getenv("TWILIO_FROM");
+            $api_key= config('services.mobizone.apiKey');
+            $api= config('services.mobizone.api');
+            $api = new \Mobizon\MobizonApi($api_key, $api);
 
-            $client = new Client($account_sid, $auth_token);
-            $client->messages->create($receiverNumber, [
-                'from' => $twilio_number,
-                'body' => $message]);
+            $api->call('message',
+                'sendSMSMessage',
+                array(
+                    'recipient' => $receiverNumber,
+                    'text' => $message,
+                ));
 
-            info('SMS Sent Successfully.');
+            if ($api->hasData()) {
+                foreach ($api->getData() as $messageInfo) {
+                    info('Message # ' . $messageInfo->id . " status:\t" . $messageInfo->status . PHP_EOL);
+                }
+            }
 
         } catch (\Exception $e) {
             info("Error: ". $e->getMessage());

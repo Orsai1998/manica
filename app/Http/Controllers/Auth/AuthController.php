@@ -28,11 +28,11 @@ class AuthController extends Controller
         }
 
         $userOtp = $this->generateOtp($request->phone_number);
-        //$userOtp->sendSMS($request->phone_number);
+        $userOtp->sendSMS($request->phone_number);
 
         return response()->json([
             'success' => 'true',
-            'message'=> 'Код отправлен '.$userOtp->code
+            'message'=> 'Код отправлен '
         ]);
     }
 

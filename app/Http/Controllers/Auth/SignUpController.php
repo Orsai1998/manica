@@ -39,11 +39,11 @@ class SignUpController extends Controller
             return response()->json(['message' => $exception->getMessage()], 500);
         }
 
-        //$userOtp->sendSMS($request->phone_number);
+        $userOtp->sendSMS($request->phone_number);
 
         return response()->json([
             'success' => 'true',
-            'message'=> 'Код отправлен '.$userOtp->code
+            'message'=> 'Код отправлен '
         ]);
     }
 
