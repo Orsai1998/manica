@@ -84,7 +84,7 @@ class BookingController extends Controller
         }
 
         if($request->is_business_trip_reservation){
-            $company =  CompanyInfo::where('booking_id', $request->booking_id)->where('user_id', $user->id)->first();
+            $company =  CompanyInfo::where('user_id', $user->id)->first();
 
             if(!$company){
                 return response()->json([

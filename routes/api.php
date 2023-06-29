@@ -66,5 +66,7 @@ Route::middleware('auth.basic')->group(function(){
     Route::group(['prefix'=>'integration'], function(){
         Route::post('/create_update_apartment_complex',  [App\Http\Controllers\ApartmentController::class, 'createUpdateApartmentComplex']);
         Route::post('/create_update_apartment',  [App\Http\Controllers\ApartmentController::class, 'createUpdateApartment']);
+        Route::post('/create_price_list',  [App\Http\Controllers\IntegrationController::class, 'createApartmentPrices']);
+        Route::post('/create_apartment_states',  [App\Http\Controllers\IntegrationController::class, 'createApartmentStates']);
     });
 });

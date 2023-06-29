@@ -14,7 +14,7 @@ class Booking extends Model
 
 
     public function apartments(){
-        return $this->hasOne(Apartment::class,'id');
+        return $this->hasOne(Apartment::class,'id','apartment_id');
     }
 
     public function numberOfDays(){

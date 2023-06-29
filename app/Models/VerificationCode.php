@@ -19,7 +19,7 @@ class VerificationCode extends Model
 
     public function sendSMS($receiverNumber)
     {
-        $message = "Login OTP is ".$this->code;
+        $message = "Manica.kz Your code: ".$this->code;
 
         try {
 

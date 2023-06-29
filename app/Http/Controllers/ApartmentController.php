@@ -126,9 +126,9 @@ class ApartmentController extends Controller
 
     public function createUpdateApartmentComplex(Request $request){
         $validator = Validator::make($request->all(), [
-            'CodeID1' => 'required',
-            'GUID' => 'required',
-            'description' => 'required',
+            '*.CodeID1' => 'required',
+            '*.GUID' => 'required',
+            '*.description' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -138,19 +138,22 @@ class ApartmentController extends Controller
             ]);
         }
 
-        $complex = ResidentialComplex::where('GUID', $request->GUID)->first();
-
         try {
-            if(!$complex){
-                $complex = new ResidentialComplex();
+        foreach ($request->all() as $item){
+
+            $complex = ResidentialComplex::where('GUID', $item['GUID'])->first();
+
+                if(!$complex){
+                    $complex = new ResidentialComplex();
+                }
+                $complex->GUID = $item['GUID'];
+                $complex->name = $item['description'];
+                $complex->code = $item['CodeID1'];
+                $complex->save();
+
+                Log::info('Apartment complex with GUID '.$item['GUID']. ' was created');
+
             }
-            $complex->GUID = $request->GUID;
-            $complex->name = $request->description;
-            $complex->code = $request->CodeID1;
-            $complex->save();
-
-            Log::info('Apartment complex with GUID '.$request->GUID. ' was created');
-
             return response()->json([
                 'success'=>true,
                 'id'=>$complex->id
@@ -162,6 +165,7 @@ class ApartmentController extends Controller
                 'message'=>$exception->getMessage()
             ]);
         }
+
     }
 
     public function createUpdateApartment(Request $request){
