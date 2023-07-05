@@ -112,15 +112,10 @@ class SignUpController extends Controller
 
         $user = Auth::user();
 
-        if(!$user){
-            return response()->json([ 'success'=>false, 'message' => 'User not found'], 400);
-        }
-
         $validator = Validator::make($request->all(), [
             'name' => 'required',
             'isFemale' => 'required',
             'birth_date' => 'required',
-            'documents' => 'required | array'
         ]);
 
         if ($validator->fails()) {
@@ -170,6 +165,7 @@ class SignUpController extends Controller
             return response()->json([ 'success'=> false, 'message' => $exception->getMessage()], 400);
         }
     }
+
 
 
 

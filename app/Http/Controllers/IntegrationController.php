@@ -105,8 +105,8 @@ class IntegrationController extends Controller
 
                             ApartmentState::create([
                                 'apartment_id' => $apartment->id,
-                                'state' => $price['Статус'],
-                                'date' => $price['Период'],
+                                'state' => $price['state'],
+                                'date' => $price['period'],
                             ]);
                         }
                     }else{

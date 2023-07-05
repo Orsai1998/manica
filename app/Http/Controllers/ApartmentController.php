@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ApartmentDetailedFeedbackResource;
 use App\Http\Resources\ApartmentDetailResource;
 use App\Http\Resources\ApartmentResource;
 use App\Http\Resources\ApartmentTypeResource;
@@ -10,6 +11,7 @@ use App\Http\Resources\ResidentialComplexResource;
 use App\Models\Apartment;
 use App\Models\ApartmentFeedback;
 use App\Models\ApartmentType;
+use App\Models\Faq;
 use App\Models\FavoriteApartment;
 use App\Models\LivingCondition;
 use App\Models\ResidentialComplex;
@@ -71,13 +73,11 @@ class ApartmentController extends Controller
             'bookings', function ($query) use ($endDate, $startDate) {
             $query->whereBetween('departure_date', [$startDate,$endDate])->where('status', '=', 'PAID');
              }
-        )->where('apartment_type_id', $apartment_type)
+        )->where('apartment_type_id', $apartment_type)->where('residential_complex_id', $residential_complex)
             ->join('apartment_prices' , function ($join) use ($minPrice, $maxPrice) {
             $join->on('apartments.id','=','apartment_prices.apartment_id');
             $join->where('apartment_prices.price','>=', $minPrice);
             $join->where('apartment_prices.price','<=', $maxPrice);
-        })->when($residential_complex, function ($query, $residential_complex)  {
-            $query->where('residential_complex_id','=' ,$residential_complex);
         })->orderBy($sortBy, $sort)->get();
 
 
@@ -119,7 +119,7 @@ class ApartmentController extends Controller
 
         $apartment = Apartment::find($request->input('apartment_id'));
 
-        return ApartmentDetailResource::collection($apartment);
+        return new ApartmentDetailedFeedbackResource($apartment);
 
     }
 
@@ -263,6 +263,35 @@ class ApartmentController extends Controller
 
         return response()->json([
             'success'=>true,
+        ]);
+    }
+
+    public function faq(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            'apartment_id' => 'required | exists:apartments,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+        $apartment = Apartment::find($request->apartment_id);
+        $organization_id = $apartment->residential_complex->organization->id;
+
+        $faq = Faq::where('organization_id', $organization_id)->first();
+
+        if($faq){
+            return response()->json([
+                'success'=>true,
+                'faq' => $faq->faq
+            ]);
+        }
+        return response()->json([
+            'success'=>false,
         ]);
     }
 }

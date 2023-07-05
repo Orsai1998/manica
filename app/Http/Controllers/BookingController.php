@@ -141,6 +141,53 @@ class BookingController extends Controller
 
     }
 
+    public function cancelBooking(Request $request){
+        $user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'booking_id' => 'required | exists:bookings,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+
+        try {
+            $booking = Booking::where('id', $request->booking_id)->where('user_id', $user->id)->first();
+           if(!$booking){
+               return response()->json([
+                   'success'=>false,
+                   'message'=>'Ваша бронь не найдена',
+               ]);
+           }
+            $payment = Payment::where('booking_id', $booking->id)->first();
+            if($payment){
+                if(!empty($payment->payment_token)){
+                    $this->paymentService->refundPayment($payment->payment_token,$payment->total_sum, 'Отмена брони №'. $booking->id);
+                }
+            }
+
+            $booking->status = 'CANCELED';
+            $payment->status = 'CANCELED';
+            $payment->save();
+            $booking->save();
+
+            return response()->json([
+                'success'=>true,
+            ]);
+        }catch (\Exception $exception){
+            Log::error($exception);
+            return response()->json([
+                'success'=>false,
+                'message'=>$exception->getMessage(),
+            ]);
+        }
+
+    }
 
     protected function createPayment(User $user, UserPaymentCard $userPaymentCard, $booking_id, $total_sum){
         $payment = new Payment();

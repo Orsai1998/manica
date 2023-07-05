@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function(){
     Route::post('user/add_card', [App\Http\Controllers\UserController::class, 'addUserPaymentCard']);
     Route::post('user/delete_card', [App\Http\Controllers\UserController::class, 'deletePaymentCard']);
     Route::post('signup', [App\Http\Controllers\Auth\SignUpController::class, 'signUp'])->name('signUp');
+    Route::post('logout', [App\Http\Controllers\Auth\AuthController::class, 'logout'])->name('logout');
 
     Route::group(['prefix'=>'booking'], function(){
         Route::post('/create',  [App\Http\Controllers\BookingController::class, 'create']);
@@ -40,6 +41,7 @@ Route::middleware('auth:sanctum')->group(function(){
         Route::get('/get',  [App\Http\Controllers\BookingController::class, 'getUserBookings']);
         Route::post('/detail',  [App\Http\Controllers\BookingController::class, 'getBookingDetail']);
         Route::post('/renewal',  [App\Http\Controllers\BookingController::class, 'renewalBooking']);
+        Route::post('/cancel',  [App\Http\Controllers\BookingController::class, 'cancelBooking']);
     });
     Route::group(['prefix'=>'company_info'], function(){
         Route::post('/create',  [App\Http\Controllers\CompanyInfoController::class, 'create']);
@@ -48,9 +50,8 @@ Route::middleware('auth:sanctum')->group(function(){
     });
     Route::post('/apartment/toggle_favorite',  [App\Http\Controllers\ApartmentController::class, 'toggleFavorite']);
     Route::get('/apartments/favorite',  [App\Http\Controllers\ApartmentController::class, 'getFavoriteApartments']);
-
 });
-
+Route::get('/apartments/faq',  [App\Http\Controllers\ApartmentController::class, 'faq']);
 
 Route::get('/apartment',  [App\Http\Controllers\ApartmentController::class, 'getApartmentInfo']);
 Route::get('/apartment_feedbacks',  [App\Http\Controllers\ApartmentController::class, 'getMoreFeedbacks']);

@@ -15,11 +15,11 @@ class ApartmentDetailedFeedbackResource extends JsonResource
     public function toArray($request)
     {
         return [
-            '5' => $this->getRateCountByRate('5'),
-            '4' => $this->getRateCountByRate('4'),
-            '3' => $this->getRateCountByRate('3'),
-            '2' => $this->getRateCountByRate('2'),
-            '1' => $this->getRateCountByRate('1'),
+            'five' => $this->getRateCountByRate('5'),
+            'four' => $this->getRateCountByRate('4'),
+            'three' => $this->getRateCountByRate('3'),
+            'two' => $this->getRateCountByRate('2'),
+            'one' => $this->getRateCountByRate('1'),
         ];
     }
 }
