@@ -11,6 +11,7 @@ use App\Models\CompanyInfo;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\UserPaymentCard;
+use App\Services\IntegrationOneCService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -24,11 +25,13 @@ class BookingController extends Controller
 {
 
     protected $paymentService;
-
-    public function __construct(PaymentGateway $paymentService)
+    protected $integrationService;
+    public function __construct(PaymentGateway $paymentService, IntegrationOneCService $integrationService)
     {
         $this->paymentService = $paymentService;
+        $this->integrationService = $integrationService;
     }
+
 
     public function create(Request $request){
         $user = Auth::user();
@@ -74,6 +77,7 @@ class BookingController extends Controller
             'entry_date' => 'required',
             'departure_date' => 'required',
             'total_sum' => 'required',
+            'deposit' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -109,8 +113,12 @@ class BookingController extends Controller
             $booking = Booking::find($request->id);
             $user = User::find($user->id);
 
+            $this->integrationService->createBooking($booking, $user);
+
             $booking->update($request->all());
             $payment = $this->createPayment($user, $userPaymentCard, $booking->id, $request->total_sum);
+
+            $this->integrationService->createPaymentDeposit($booking, $user, $request->deposit);
 
             $paymentService =  $this->paymentService->createPayment($request->total_sum, $payment->guid,
                 "Оплата брони №".$booking->id." в приложений MANICA.kz",
@@ -175,7 +183,7 @@ class BookingController extends Controller
             $payment->status = 'CANCELED';
             $payment->save();
             $booking->save();
-
+            $this->integrationService->cancelBooking($booking);
             return response()->json([
                 'success'=>true,
             ]);
@@ -208,12 +216,12 @@ class BookingController extends Controller
 
         $user = Auth::user();
         $now = Carbon::now()->format('Y-m-d');
-        if($active){
-            $booking = Booking::where('user_id', $user->id)->where('status','=','PAID')
-                ->whereDate('departure_date','<=',$now)->get();
+        if($active == 1){
+            $booking = Booking::where('user_id', $user->id)
+                ->whereDate('departure_date','>=',$now)->get();
         } else{
-            $booking = Booking::where('user_id', $user->id)->where('status','=','PAID')
-                ->whereDate('departure_date','>',$now)->get();
+            $booking = Booking::where('user_id', $user->id)
+                ->whereDate('departure_date','<',$now)->get();
         }
 
         return UserBookingsResource::collection($booking);
@@ -234,6 +242,7 @@ class BookingController extends Controller
 
         try {
             $booking = Booking::find($request->booking_id);
+            print_r($booking->payments);
             return new BookingDetailResource($booking);
 
         }catch (\Exception $exception){
@@ -267,6 +276,7 @@ class BookingController extends Controller
         DB::beginTransaction();
 
         try {
+            $user = User::find($user->id);
             $userPaymentCard = $user->payment_cards->where('is_main','=','1')->first();
             //Создаем локальный платеж
             $payment = $this->createPayment($user, $userPaymentCard, $booking->id, $request->total_sum);
@@ -282,6 +292,7 @@ class BookingController extends Controller
                 $this->changeStatusToPaid($booking->id, $payment->id);
                 $booking->departure_date = $request->new_departure_datetime;
                 $booking->save();
+                $this->integrationService->changeBooking($booking, $user);
             }else{
                 Log::info('Статус оплаты брони №'. $booking->id. ' '. $paymentInfo['status']);
                 $this->changeStatusToUnknown($booking->id, $payment->id, $paymentInfo['status']);

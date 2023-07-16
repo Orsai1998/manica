@@ -22,6 +22,7 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'isFemale' => $this->isFemale,
             'birth_date' => $this->birth_date,
+            'documents' => UserDocumentsResource::collection($this->documents),
             'cards' => UserPaymentCardResource::collection($this->payment_cards)
         ];
     }

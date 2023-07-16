@@ -18,6 +18,7 @@ class UserPaymentCardResource extends JsonResource
             'id' => $this->id,
             'account' =>  $this->account,
             'brand' => $this->brand,
+            'is_main' => $this->is_main,
         ];
     }
 }

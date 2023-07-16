@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Payment;
+use App\Models\UserPaymentCard;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class BookingDetailResource extends JsonResource
@@ -26,6 +28,10 @@ class BookingDetailResource extends JsonResource
             'days' => $this->numberOfDays(),
             'is_late_departure' => $this->is_late_departure,
             'total_sum' => $this->total_sum,
+            'payment_method' => $this->getPaymentMethod(),
+            'key-lock' => $this->getKeyLock()
         ];
     }
+
+
 }

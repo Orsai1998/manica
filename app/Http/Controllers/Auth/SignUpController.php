@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Billing\PaymentGateway;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserDocument;
 use App\Models\VerificationCode;
+use App\Services\IntegrationOneCService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,6 +21,12 @@ use function response;
 
 class SignUpController extends Controller
 {
+    protected $integrationService;
+
+    public function __construct(IntegrationOneCService $integrationService)
+    {
+        $this->integrationService = $integrationService;
+    }
     public function sendOtpToRegister(Request $request)
     {
 
@@ -137,7 +145,7 @@ class SignUpController extends Controller
 
             }
             if ($request->hasFile('documents')) {
-
+                $this->integrationService->addUserDocuments($request);
                 foreach ($request->file('documents') as $image) {
                     $fileName = $image->getClientOriginalName();
                     $path = $image->storeAs('documents', $fileName, 'public');
@@ -157,7 +165,7 @@ class SignUpController extends Controller
             $user->isFemale = $request->input('isFemale');
             $user->birth_date = Carbon::createFromDate($request->input('birth_date'))->format("y.m.d");
             $user->save();
-
+            $this->integrationService->createUpdateUser($user);
             return response()->json([ 'success'=> true], 200);
 
         } catch (\Exception $exception){

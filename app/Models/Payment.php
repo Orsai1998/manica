@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Payment extends Model
 {
     use HasFactory;
+    protected $table = 'payments';
     protected $guarded = [];
 
 
@@ -15,5 +16,10 @@ class Payment extends Model
 
         $this->payment_token = $token;
         $this->save();
+    }
+
+    public function payment_method(){
+
+        return $this->hasOne(UserPaymentCard::class,"id","user_card_id");
     }
 }

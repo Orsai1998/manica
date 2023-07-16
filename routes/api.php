@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function(){
     Route::get('user', [App\Http\Controllers\UserController::class, 'index'])->name('index');
     Route::post('/user/update', [App\Http\Controllers\UserController::class, 'update'])->name('update');
     Route::post('user/add_card', [App\Http\Controllers\UserController::class, 'addUserPaymentCard']);
+    Route::post('user/set_default_card', [App\Http\Controllers\UserController::class, 'setDefaultCard']);
     Route::post('user/delete_card', [App\Http\Controllers\UserController::class, 'deletePaymentCard']);
     Route::post('signup', [App\Http\Controllers\Auth\SignUpController::class, 'signUp'])->name('signUp');
     Route::post('logout', [App\Http\Controllers\Auth\AuthController::class, 'logout'])->name('logout');
@@ -50,8 +51,10 @@ Route::middleware('auth:sanctum')->group(function(){
     });
     Route::post('/apartment/toggle_favorite',  [App\Http\Controllers\ApartmentController::class, 'toggleFavorite']);
     Route::get('/apartments/favorite',  [App\Http\Controllers\ApartmentController::class, 'getFavoriteApartments']);
+    Route::post('/apartments/add_feedback',  [App\Http\Controllers\ApartmentController::class, 'addFeedback']);
 });
 Route::get('/apartments/faq',  [App\Http\Controllers\ApartmentController::class, 'faq']);
+Route::get('/common/faq',  [App\Http\Controllers\CommonController::class, 'getQuestionAnswer']);
 
 Route::get('/apartment',  [App\Http\Controllers\ApartmentController::class, 'getApartmentInfo']);
 Route::get('/apartment_feedbacks',  [App\Http\Controllers\ApartmentController::class, 'getMoreFeedbacks']);

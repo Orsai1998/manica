@@ -119,6 +119,7 @@ class UserController extends Controller
 
             if($payment){
                  $paymentInfo = $this->paymentService->getPaymentInfo($token);
+                 Log::info($paymentInfo);
                   if($paymentInfo['status'] == 'successful' && $paymentInfo['subscription']['status'] == 'active'){
                       $this->savePaymentMethod($paymentInfo['payment_method'], $paymentInfo['subscription']['token'], $payment['token']);
 
@@ -138,6 +139,42 @@ class UserController extends Controller
                 'message'=> $exception->getMessage()
             ]);
         }
+    }
+
+    public function setDefaultCard(Request $request){
+        $user = Auth::user();
+        $validator = Validator::make($request->all(), [
+            'card_id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+        $user_card = UserPaymentCard::where('id', $request->card_id)->where('user_id', $user->id)->first();
+
+        if($user_card){
+            $user_card_main = UserPaymentCard::where('is_main','=' , 1)->where('user_id', $user->id)->first();
+
+            if($user_card_main){
+                $user_card_main->is_main = 0;
+                $user_card_main->save();
+            }
+
+            $user_card->is_main = 1;
+
+            $user_card->save();
+            return response()->json([
+                'success'=>true,
+            ]);
+        }
+        return response()->json([
+            'success'=>false,
+            'message'=>'Карта не найдена'
+        ]);
     }
 
     public function deletePaymentCard(Request $request){
@@ -170,7 +207,7 @@ class UserController extends Controller
         if($user){
             DB::beginTransaction();
             try {
-                $userPayment = UserPaymentCard::where('subscription_token', $paymentMethod['card']['fingerprint'])
+                $userPayment = UserPaymentCard::where('fingerprint', $paymentMethod['card']['fingerprint'])
                     ->where('user_id', $user->id)->first();
 
                 if($userPayment){
@@ -182,7 +219,7 @@ class UserController extends Controller
                 $userPayment->account = $paymentMethod['account'];
                 $userPayment->subscription_token = $subscription_token;
                 $userPayment->fingerprint = $paymentMethod['card']['fingerprint'];
-                $userPayment->bank = $paymentMethod['card']['bank'];
+                $userPayment->bank = $paymentMethod['card']['bank'] ?? "";
                 $userPayment->brand = $paymentMethod['card']['brand'];;
                 $userPayment->is_main = count($user->payment_cards) > 0 ? 0 : 1;
                 $userPayment->save();

@@ -63,6 +63,9 @@ class ApartmentController extends Controller
         if($sortBy == 'newest'){
             $sortBy = 'apartments.created_at';
         }
+        if($sortBy == 'popular'){
+            $sortBy = 'apartments.created_at';
+        }
 
         if($sortBy == 'for_big_family'){
             $sortBy = 'apartments.room_number';
@@ -71,9 +74,12 @@ class ApartmentController extends Controller
 
         $apartment = Apartment::query()->orDoesntHave('bookings')->orWhereDoesntHave(
             'bookings', function ($query) use ($endDate, $startDate) {
-            $query->whereBetween('departure_date', [$startDate,$endDate])->where('status', '=', 'PAID');
+            $query->whereBetween('departure_date', [$startDate,$endDate])->where('status', '=', 'PAID')->orWhere('status', '=', 'PROCESS');
              }
-        )->where('apartment_type_id', $apartment_type)->where('residential_complex_id', $residential_complex)
+        )->where('apartment_type_id', $apartment_type)
+            ->when($residential_complex, function($query) use ($residential_complex){
+                $query->where('residential_complex_id', $residential_complex);
+            })
             ->join('apartment_prices' , function ($join) use ($minPrice, $maxPrice) {
             $join->on('apartments.id','=','apartment_prices.apartment_id');
             $join->where('apartment_prices.price','>=', $minPrice);
@@ -292,6 +298,33 @@ class ApartmentController extends Controller
         }
         return response()->json([
             'success'=>false,
+        ]);
+    }
+
+    public function addFeedback(Request  $request){
+        $user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'rate' => 'required',
+            'feedback' => 'required',
+            'apartment_id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+        ApartmentFeedback::create([
+            'apartment_id' => $request->apartment_id,
+            'user_id' => $user->id,
+            'rate' => $request->rate,
+            'feedback' => $request->feedback,
+        ]);
+        return response()->json([
+            'success'=>true,
         ]);
     }
 }

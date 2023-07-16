@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\VerificationCode;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -94,7 +95,7 @@ class AuthController extends Controller
         if($user){
 
             $userOtp->update([
-                'expire_at' => now()
+                'expire_at' => Carbon::now()
             ]);
 
             return $this->respondWithToken($user->createToken('TOKEN')->plainTextToken);

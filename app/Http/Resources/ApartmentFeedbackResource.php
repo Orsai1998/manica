@@ -20,7 +20,7 @@ class ApartmentFeedbackResource extends JsonResource
             'id' => $this->id,
             'avatar' => $this->user->avatar,
             'user_name' => $this->user->name,
-            'date' => Carbon::createFromDate($this->created_at)->format('F Y'),
+            'date' => Carbon::createFromDate($this->created_at)->format('Y-m-d'),
             'rate' => $this->rate,
             'feedback' => $this->feedback,
         ];
