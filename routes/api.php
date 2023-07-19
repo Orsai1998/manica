@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function(){
     Route::post('user/add_card', [App\Http\Controllers\UserController::class, 'addUserPaymentCard']);
     Route::post('user/set_default_card', [App\Http\Controllers\UserController::class, 'setDefaultCard']);
     Route::post('user/delete_card', [App\Http\Controllers\UserController::class, 'deletePaymentCard']);
+    Route::post('user/delete_document', [App\Http\Controllers\UserController::class, 'deleteDocument']);
     Route::post('signup', [App\Http\Controllers\Auth\SignUpController::class, 'signUp'])->name('signUp');
     Route::post('logout', [App\Http\Controllers\Auth\AuthController::class, 'logout'])->name('logout');
 
@@ -55,6 +56,8 @@ Route::middleware('auth:sanctum')->group(function(){
 });
 Route::get('/apartments/faq',  [App\Http\Controllers\ApartmentController::class, 'faq']);
 Route::get('/common/faq',  [App\Http\Controllers\CommonController::class, 'getQuestionAnswer']);
+Route::get('/common/cities',  [App\Http\Controllers\CommonController::class, 'getCities']);
+Route::get('/common/docs',  [App\Http\Controllers\CommonController::class, 'getOrganizationDocuments']);
 
 Route::get('/apartment',  [App\Http\Controllers\ApartmentController::class, 'getApartmentInfo']);
 Route::get('/apartment_feedbacks',  [App\Http\Controllers\ApartmentController::class, 'getMoreFeedbacks']);

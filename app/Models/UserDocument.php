@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class UserDocument extends Model
 {
@@ -11,5 +12,5 @@ class UserDocument extends Model
         'user_id',
         'path',
     ];
-    use HasFactory;
+    use HasFactory,SoftDeletes;
 }

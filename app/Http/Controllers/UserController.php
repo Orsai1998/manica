@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Billing\PaymentGateway;
 use App\Http\Resources\UserResource;
+use App\Models\UserDocument;
 use App\Models\UserPaymentCard;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -139,6 +140,27 @@ class UserController extends Controller
                 'message'=> $exception->getMessage()
             ]);
         }
+    }
+
+    public function deleteDocument(Request $request){
+        $user = Auth::user();
+        $validator = Validator::make($request->all(), [
+            'doc_id' => 'required',
+        ]);
+
+        $userDocument = UserDocument::where('user_id', $user->id)->where('id', $request->doc_id)->first();
+
+        if($userDocument){
+            $userDocument->delete();
+
+            return response()->json([
+                'success' => true
+            ]);
+        }
+        return response()->json([
+            'success'=>false,
+            'message'=>'Doc not found'
+        ]);
     }
 
     public function setDefaultCard(Request $request){
