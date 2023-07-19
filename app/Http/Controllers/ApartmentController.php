@@ -203,6 +203,9 @@ class ApartmentController extends Controller
                         $apartment->GUID = $item['GUID'];
                         $apartment->residential_complex_id = $currentComplex->id;
                         $apartment->address = $item['address'];
+                        $apartment->flat = $item['apartmentNumber'];
+                        $apartment->floor = $item['floor'];
+                        $apartment->block = $item['block'];
                         $apartment->description = $item['description'];
                         $apartment->longitude = $item['Longitude'];
                         $apartment->latitude = $item['Latitude'];
