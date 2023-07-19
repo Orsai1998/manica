@@ -14,7 +14,8 @@ class VerificationCode extends Model
     protected $fillable = [
         'user_id',
         'phone_number',
-        'code'
+        'code',
+        'expire_at'
     ];
 
     public function sendSMS($receiverNumber)

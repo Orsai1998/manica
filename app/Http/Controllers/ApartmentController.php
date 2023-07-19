@@ -132,7 +132,7 @@ class ApartmentController extends Controller
 
     public function createUpdateApartmentComplex(Request $request){
         $validator = Validator::make($request->all(), [
-            '*.CodeID1' => 'required',
+
             '*.GUID' => 'required',
             '*.description' => 'required',
         ]);
@@ -177,7 +177,6 @@ class ApartmentController extends Controller
     public function createUpdateApartment(Request $request){
 
         $validator = Validator::make($request->all(), [
-            '*.CodeID1' => 'required',
             '*.GUID' => 'required',
             '*.apartmentComplex' => 'required',
         ]);
@@ -188,10 +187,10 @@ class ApartmentController extends Controller
                 'message'=>$validator->errors()
             ]);
         }
-
+        $apartments = [];
         try {
             foreach ($request->all() as $item){
-
+                    Log::info($item['GUID']);
                     $currentComplex = ResidentialComplex::where('GUID', $item['apartmentComplex']['GUID'])->first();
 
                     if($currentComplex){
@@ -210,19 +209,19 @@ class ApartmentController extends Controller
                         $apartment->room_number = $item['rooms'];
                         $apartment->apartment_type_id = 1;
                         $apartment->save();
+                        $apartments[] = $apartment->id;
 
 
-                        return response()->json([
-                            'success'=>true,
-                            'apartment_id'=> $apartment->id
-                        ]);
+
+                    }else{
+                        Log::error('Apartment complex does not exists '. $item['apartmentComplex']['GUID']);
                     }
 
-                return response()->json([
-                    'success'=>false,
-                    'message'=> 'Apartment complex does not exists'
-                ]);
             }
+            return response()->json([
+                'success'=>true,
+                'apartments'=> $apartments
+            ]);
         }catch (\Exception $exception){
             Log::error($exception);
             return response()->json([

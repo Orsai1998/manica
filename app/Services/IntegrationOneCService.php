@@ -96,7 +96,7 @@ class IntegrationOneCService
                 "clientID" => $user->guid,
                 "phoneNumber" => $user->phone_number
             ],
-             "apartmentID" =>  $booking->apartments()->GUID,
+             "apartmentID" =>  $booking->apartments->GUID,
              "checkIn" =>  $booking->entry_date,
              "checkOut" =>  $booking->depature_date,
              "note" =>  "Бронь №".$booking->id,
@@ -121,7 +121,7 @@ class IntegrationOneCService
                 "clientID" => $user->guid,
                 "phoneNumber" => $user->phone_number
             ],
-            "apartmentID" =>  $booking->apartments()->GUID,
+            "apartmentID" =>  $booking->apartments->GUID,
             "date" =>  $booking->entry_date,
             "paymentType" =>  "depozit",
             "summ" =>  $deposit,
@@ -146,7 +146,7 @@ class IntegrationOneCService
                 "clientID" => $user->guid,
                 "phoneNumber" => $user->phone_number
             ],
-            "apartmentID" =>  $booking->apartments()->GUID,
+            "apartmentID" =>  $booking->apartments->GUID,
             "reservationId" => $booking->one_c_guid,
             "checkIn" =>  $booking->entry_date,
             "checkOut" =>  $booking->depature_date,

@@ -33,33 +33,23 @@ class IntegrationController extends Controller
                 $apartment= Apartment::where('GUID', $item['GUID'])->first();
 
                 if(!$apartment){
-                    Log::error('Apartment complex with GUID '.$item['GUID']. ' was not found');
-                    return response()->json([
-                        'success'=>false,
-                        'message' => 'Apartment complex with GUID '.$item['GUID']. ' was not found'
-                    ]);
+                    Log::error('Apartment  with GUID '.$item['GUID']. ' was not found');
                 }else{
                     if(!empty($item['priceList'])){
 
                         foreach($item['priceList'] as $price){
                             $apartmentPrice = ApartmentPrice::where('apartment_id',  $apartment->id)
                                 ->where('date', $price['period'])->get();
-                            if(empty($apartmentPrice)){
-                                ApartmentPrice::create([
-                                    'apartment_id' => $apartment->id,
-                                    'price' => $price['price'],
-                                    'state' => 1,
-                                    'date' => $price['period'],
-                                ]);
-                            }
+                            ApartmentPrice::create([
+                                'apartment_id' => $apartment->id,
+                                'price' => $price['price'],
+                                'state' => 1,
+                                'date' => $price['period'],
+                            ]);
 
                         }
                     }else{
                         Log::error('Apartment with GUID '.$item['GUID']. ' was with empty price list');
-                        return response()->json([
-                            'success'=>false,
-                            'message' => 'Apartment with GUID '.$item['GUID']. ' was with empty price list'
-                        ]);
                     }
                 }
             }
@@ -98,10 +88,6 @@ class IntegrationController extends Controller
 
                 if(!$apartment){
                     Log::error('Apartment complex with GUID '.$item['GUID']. ' was not found');
-                    return response()->json([
-                        'success'=>false,
-                        'message' => 'Apartment complex with GUID '.$item['GUID']. ' was not found'
-                    ]);
                 }else{
                     if(!empty($item['states'])){
 

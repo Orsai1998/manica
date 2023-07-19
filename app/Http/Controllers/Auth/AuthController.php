@@ -44,7 +44,7 @@ class AuthController extends Controller
         $user = User::where('phone_number', $phone_number)->first();
         $userOtp = VerificationCode::where('user_id', $user->id)->latest()->first();
 
-        $now = now();
+        $now = Carbon::now();
 
         if($userOtp && $now->isBefore($userOtp->expire_at)){
             return $userOtp;
@@ -54,7 +54,7 @@ class AuthController extends Controller
             'user_id' => $user->id,
             'phone_number' => $phone_number,
             'code' => rand(1000, 9999),
-            'expire_at' => $now->addMinutes(1000)
+            'expire_at' => $now->addMinutes(5)
         ]);
     }
 
