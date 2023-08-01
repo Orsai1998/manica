@@ -14,8 +14,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Nette\Schema\ValidationException;
 use function now;
 use function response;
 
@@ -31,7 +33,7 @@ class SignUpController extends Controller
     {
 
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|unique:users,phone_number'
+            'phone_number' => 'required|numeric|digits:11|unique:users'
         ]);
 
         if ($validator->fails()) {
@@ -91,20 +93,28 @@ class SignUpController extends Controller
         $user = VerificationCode::where('phone_number', $request->phone_number)
             ->where('code', $request->code)
             ->first();
-
-        if (!$user) {
+        $now = now();
+        if (!$now->isBefore($user->expire_at)) {
             return response()->json([
                 'success'=>false,
                 'message' => 'Invalid OTP'
-            ], 401);
+            ], 400);
         }
 
         // OTP is valid, perform further actions like login or account activation
         $role = Role::where('name','client')->first();
+        $userPhone = User::where('phone_number', $request->phone_number)->first();
 
+        if($userPhone){
+            return response()->json([
+                'success'=>false,
+                'message' => 'Клиент с таким номером уже существует'
+            ], 400);
+        }
         $user = User::create([
             'name' => 'TEMP',
             'email' => $request->phone_number.'@mail.ru',
+            'guid' => (string) Str::uuid(),
             'phone_number' => $request->phone_number,
             'email_verified_at' => now(),
             'role_id' => $role->id,
@@ -119,11 +129,13 @@ class SignUpController extends Controller
     public function signUp(Request $request){
 
         $user = Auth::user();
-
+        DB::beginTransaction();
         $validator = Validator::make($request->all(), [
             'name' => 'required',
             'isFemale' => 'required',
             'birth_date' => 'required',
+            'front_ID' => 'required',
+            'back_ID' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -144,20 +156,35 @@ class SignUpController extends Controller
                 }
 
             }
-            if ($request->hasFile('documents')) {
-                $this->integrationService->addUserDocuments($request);
-                foreach ($request->file('documents') as $image) {
-                    $fileName = $image->getClientOriginalName();
-                    $path = $image->storeAs('documents', $fileName, 'public');
+            if($request->hasFile('front_ID')){
+                $frontId = $request->file('front_ID');
+                $frontIdName = $frontId->getClientOriginalName();
+                $frontIdPath = $frontId->storeAs('documents', $frontIdName, 'public');
 
-                    UserDocument::create([
-                        'user_id' => $user->id,
-                        'path' => $path
-                    ]);
+                if(!empty($frontIdPath)){
+                    $userDoc = UserDocument::where('user_id', $user->id)->where('path', $frontIdPath)->first();
+                    if($userDoc){
+                        $userDoc->path = $frontIdPath;
+                        $userDoc->save();
+                    }else{
+                        $this->createUserDocument($user->id, $frontIdPath,'front');
+                    }
 
                 }
-            }else {
-                return response()->json([ 'success'=> false, 'message' => 'Documents was not uploaded'], 400);
+
+            }
+            if($request->hasFile('back_ID')){
+                $backId = $request->file('back_ID');
+                $backIdName = $backId->getClientOriginalName();
+                $backIdPath = $backId->storeAs('documents', $backIdName, 'public');
+
+                $userDoc = UserDocument::where('user_id', $user->id)->where('path', $backIdPath)->first();
+                if($userDoc){
+                    $userDoc->path = $backIdPath;
+                    $userDoc->save();
+                }else{
+                    $this->createUserDocument($user->id, $backIdPath,'back');
+                }
 
             }
 
@@ -165,7 +192,10 @@ class SignUpController extends Controller
             $user->isFemale = $request->input('isFemale');
             $user->birth_date = Carbon::createFromDate($request->input('birth_date'))->format("y.m.d");
             $user->save();
-            $this->integrationService->createUpdateUser($user);
+            $client = User::find($user->id);
+            $this->integrationService->createUpdateUser($client);
+
+            DB::commit();
             return response()->json([ 'success'=> true], 200);
 
         } catch (\Exception $exception){
@@ -176,7 +206,13 @@ class SignUpController extends Controller
 
 
 
-
+    protected function createUserDocument($user_id, $path, $type){
+        UserDocument::create([
+            'user_id' => $user_id,
+            'path' => $path,
+            'name' => $type
+        ]);
+    }
     protected function respondWithToken(string $token): JsonResponse
     {
         return response()->json([

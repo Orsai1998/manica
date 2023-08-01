@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class IntegrationOneCService
 {
@@ -22,17 +23,14 @@ class IntegrationOneCService
     public function __construct()
     {
         $this->url = config('services.one_c.url');
-        $this->username = config('services.one_c_username.username');
-        $this->password = config('services.one_c_password.create_payment_url');
+        $this->username = config('services.one_c.username');
+        $this->password = config('services.one_c.password');
     }
 
     protected function makeRequest(string $uri, array $params = [], $isAuthRequired = false)
     {
 
-        if($isAuthRequired){
-            $response = Http::withBasicAuth($this->username, $this->password);
-        }
-        $response = Http::asForm();
+        $response = Http::withBasicAuth($this->username, $this->password);
         $response = $response->post($uri, $params);
 
         return $this->parseResponse($response);
@@ -54,16 +52,53 @@ class IntegrationOneCService
 
         if($response->failed()) {
             Log::error($response);
-            throw new \Exception('Api service error with status: '.$response->status(), $response->status());
+            throw new \Exception('Api service error with status: '.$response->status().json_encode($response));
         }
+    }
+
+    public function sendUserDocuments(User $user){
+
+        $url = $this->url.'/send_client_document';
+        if($user->getDocumentPhoto('front') && $user->getDocumentPhoto('back')){
+            $requestArray = [
+                "clientId" => $user->guid,
+                "front_ID" => [
+                    "name" => $user->getDocumentPhoto('front')->name,
+                    "url" => asset('storage/'.$user->getDocumentPhoto('front')->path),
+                ],
+                "back_ID" => [
+                    "name" => $user->getDocumentPhoto('back')->name,
+                    "url" => asset('storage/'.$user->getDocumentPhoto('back')->path),
+                ]
+            ];
+
+            try {
+                $response = $this->makeRequest($url, $requestArray);
+
+               echo print_r($response);
+                if(!array_key_exists('success', $response)){
+                    throw new \Exception(json_encode($response));
+                }
+                if(!$response['success']){
+                    throw new \Exception($this->parseError($response['error']));
+                }
+
+
+            }catch (\Exception $exception){
+                Log::error($exception);
+                throw new \Exception($exception->getMessage());
+            }
+        }else{
+            echo 'Нет документов';
+        }
+
     }
 
     public function createUpdateUser(User $user){
 
         $url = $this->url.'/create_update_user';
-
         $requestArray = [
-            'clientID' => "b09569e8-dda7-11ed-9ee5-8888888887",
+            'clientID' => $user->guid,
             'description' => "test123",
             'bdate' => $user->birth_date,
             'sex' => $user->isFemale ? "f" : "m",
@@ -76,13 +111,20 @@ class IntegrationOneCService
         try {
             $response = $this->makeRequest($url, $requestArray);
 
-            if($response['success']){
-                $user->guid =  $response['GUID'];
-                $user->save();
+            if(!array_key_exists('success', $response)){
+                throw new \Exception(json_encode($response));
             }
+            if(!$response['success']){
+                throw new \Exception($this->parseError($response['error']));
+            }
+            $user->one_c_guid =  $response['GUID'];
+            $user->save();
+
+            $this->sendUserDocuments($user);
 
         }catch (\Exception $exception){
             Log::error($exception);
+            throw new \Exception($exception->getMessage());
         }
     }
 
@@ -98,22 +140,26 @@ class IntegrationOneCService
             ],
              "apartmentID" =>  $booking->apartments->GUID,
              "checkIn" =>  $booking->entry_date,
-             "checkOut" =>  $booking->depature_date,
+             "checkOut" =>  $booking->departure_date,
              "note" =>  "Бронь №".$booking->id,
         ];
 
         try {
+
             $response = $this->makeRequest($url, $requestArray);
-            if($response['success']){
-                $booking->one_c_guid = $response['id'];
-                $booking->save();
+            if(!$response['success']){
+                throw new \Exception($this->parseError($response['error']));
             }
+            $booking->one_c_guid = $response['GUID'];
+            $booking->save();
+
         }catch (\Exception $exception){
             Log::error($exception);
+            throw new \Exception($exception->getMessage());
         }
     }
 
-    public function createPaymentDeposit(Booking $booking, User $user, $deposit){
+    public function createPayment(Booking $booking, User $user,String $type ,$deposit, $paymentToken){
         $url = $this->url.'/create_payment';
         $requestArray = [
             'client' => [
@@ -123,17 +169,25 @@ class IntegrationOneCService
             ],
             "apartmentID" =>  $booking->apartments->GUID,
             "date" =>  $booking->entry_date,
-            "paymentType" =>  "depozit",
+            "paymentType" =>  $type,
             "summ" =>  $deposit,
             "reservationId" => $booking->one_c_guid,
             "note" =>  "depozit",
-            "transactionID" =>  $booking->one_c_guid,
+            "transactionID" => $paymentToken,
         ];
 
         try {
-           $this->makeRequest($url, $requestArray);
+            $response = $this->makeRequest($url, $requestArray);
+            Log::info($response);
+            if(!array_key_exists('success', $response)){
+                throw new \Exception(json_encode($response));
+            }
+            if(!$response['success']){
+                throw new \Exception($this->parseError($response['error']));
+            }
         }catch (\Exception $exception){
             Log::error($exception);
+            throw new \Exception($exception->getMessage());
         }
 
     }
@@ -154,28 +208,46 @@ class IntegrationOneCService
         ];
 
         try {
-            $this->makeRequest($url, $requestArray);
+            $response = $this->makeRequest($url, $requestArray);
+            if(!$response['success']){
+                throw new \Exception($this->parseError($response['error']));
+            }
         }catch (\Exception $exception){
             Log::error($exception);
+            throw new \Exception($exception->getMessage());
         }
     }
 
-    public function addUserDocuments(Request $request){
+    public function addUserDocuments($image, $clientId){
 
         $url = $this->url.'/send_client_document';
-        if ($request->hasFile('documents')) {
-            $requestArray = array();
-            foreach ($request->file('documents') as $key => $document) {
-                $requestArray['image'.$key] = $document;
-            }
 
-            try {
-                $this->makeRequest($url, $requestArray);
-            }catch (\Exception $exception){
-                Log::error($exception);
-            }
+        try {
+            $response = Http::withBasicAuth($this->username, $this->password)->withBody(
+                file_get_contents($image->path()), // Content of the image
+                $image->getClientOriginalName(),   // Original image name
+                'image/jpeg'                       // MIME type of the image (change as per your image type)
+            )->withOptions([
+                'multipart' => true, // Set the request as a multipart/form-data request
+            ])->post($url, [
+                'clientId' => $clientId,           // Additional key-value pair
+            ]);
 
+            Log::info($response);
+        }catch (\Exception $exception){
+           throw $exception;
         }
+
+    }
+
+    protected function parseError(Array $response): string
+    {
+        $messageErr = "";
+        for ($i = 0; $i< count($response); $i++){
+            $messageErr .= (string)$response[$i] . "; ";
+        }
+
+        return $messageErr;
     }
 
     public function cancelBooking(Booking $booking){
@@ -188,9 +260,14 @@ class IntegrationOneCService
             ];
 
             try {
-                $this->makeRequest($url, $requestArray);
+                $response = $this->makeRequest($url, $requestArray);
+                if(!$response['success']){
+                    throw new \Exception($this->parseError($response['error']));
+                }
+
             }catch (\Exception $exception){
                 Log::error($exception);
+                throw new \Exception($exception->getMessage());
             }
         }
     }

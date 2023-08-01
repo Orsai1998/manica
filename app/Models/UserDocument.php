@@ -11,6 +11,7 @@ class UserDocument extends Model
     protected $fillable = [
         'user_id',
         'path',
+        'name',
     ];
     use HasFactory,SoftDeletes;
 }

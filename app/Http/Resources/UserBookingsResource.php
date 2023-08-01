@@ -16,6 +16,7 @@ class UserBookingsResource extends JsonResource
     {
         return [
             'booking_id' => $this->id,
+            'status' => $this->status,
             'photo' => $this->apartments->mainPhoto(),
             'residential_complex_name' => $this->apartments->residential_complex->name,
             'entry_date' => $this->entry_date,

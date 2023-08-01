@@ -29,33 +29,47 @@ class AuthController extends Controller
             ]);
         }
 
-        $userOtp = $this->generateOtp($request->phone_number);
-        $userOtp->sendSMS($request->phone_number);
+        try {
+            $userOtp = $this->generateOtp($request->phone_number);
+            $userOtp->sendSMS($request->phone_number);
 
-        return response()->json([
-            'success' => 'true',
-            'message'=> 'Код отправлен '
-        ]);
+            return response()->json([
+                'success' => 'true',
+                'message'=> 'Код отправлен '
+            ]);
+        }
+        catch (\Exception $exception){
+            return response()->json([
+                'success' => 'false',
+                'message'=> $exception->getMessage()
+            ]);
+        }
     }
 
 
     public function generateOtp($phone_number)
     {
-        $user = User::where('phone_number', $phone_number)->first();
-        $userOtp = VerificationCode::where('user_id', $user->id)->latest()->first();
+        try {
+            $user = User::where('phone_number', $phone_number)->first();
+            if(!$user){
+                throw new \Exception('User not found');
+            }
+            $userOtp = VerificationCode::where('user_id', $user->id)->latest()->first();
+            $now = Carbon::now();
 
-        $now = Carbon::now();
+            if($userOtp && $now->isBefore($userOtp->expire_at)){
+                return $userOtp;
+            }
 
-        if($userOtp && $now->isBefore($userOtp->expire_at)){
-            return $userOtp;
+            return VerificationCode::create([
+                'user_id' => $user->id,
+                'phone_number' => $phone_number,
+                'code' => rand(1000, 9999),
+                'expire_at' => $now->addMinutes(10)
+            ]);
+        }catch (\Exception $exception){
+            throw new \Exception($exception->getMessage());
         }
-
-        return VerificationCode::create([
-            'user_id' => $user->id,
-            'phone_number' => $phone_number,
-            'code' => rand(1000, 9999),
-            'expire_at' => $now->addMinutes(5)
-        ]);
     }
 
     public function loginWithOtp(Request $request)
@@ -83,7 +97,7 @@ class AuthController extends Controller
                 'success' => 'false',
                 'message'=> 'Введенный код не верен'
             ]);
-        }else if($userOtp && $now->isAfter($userOtp->expire_at)){
+        }else if($now->isAfter($userOtp->expire_at)){
             return response()->json([
                 'success' => 'false',
                 'message'=>  'Введенный код просрочен'
@@ -106,6 +120,19 @@ class AuthController extends Controller
         ]);
     }
 
+    public function deleteAcc(){
+        $user = Auth::user();
+
+        $userAcc = User::find($user->id);
+
+        if($userAcc){
+            $userAcc->delete();
+        }
+
+        return response()->json([
+            'success' => true,
+        ]);
+    }
     public function logout(){
          Auth::user()->currentAccessToken()->delete();
         return response()->json([

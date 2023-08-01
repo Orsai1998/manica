@@ -20,6 +20,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -44,27 +45,42 @@ class ApartmentController extends Controller
         $apartment_type = $request->input('apartment_type_id') ?? 1;
         $adultAmount = $request->input('adult_amount');
         $childrenAmount = $request->input('children_amount');
+        $rooms = $request->input('rooms');
         $sortBy = $request->input('sortBy');
         $sort = $request->input('sort') ?? 'asc';
         $minPrice = (integer)$request->min_price;
         $maxPrice = (integer)$request->max_price;
         $residential_complex = $request->input('residential_complex_id');
 
-
+        if(!$minPrice){
+            $minPrice = 1000;
+        }
+        if(!$maxPrice){
+            $maxPrice = 1000000;
+        }
+        if(!$startDate){
+            $startDate = Carbon::now()->format('Y-m-d');
+        }
+        if(!$endDate){
+            $endDate = Carbon::now()->addDays(10)->format('Y-m-d');
+        }
+        if(!$rooms){
+            $rooms = 0;
+        }
         if(!$sortBy){
             $minPrice = 1000;
             $maxPrice = 1000000;
-            $sortBy = 'apartment_prices.price';
+            $sortBy = 'apartment_price_intervals.price';
         }
         if($sortBy == 'price'){
-            $sortBy = 'apartment_prices.price';
+            $sortBy = 'apartment_price_intervals.price';
         }
 
         if($sortBy == 'newest'){
             $sortBy = 'apartments.created_at';
         }
         if($sortBy == 'popular'){
-            $sortBy = 'apartments.created_at';
+            $sortBy = 'feedbacks_avg_rate';
         }
 
         if($sortBy == 'for_big_family'){
@@ -76,16 +92,25 @@ class ApartmentController extends Controller
             'bookings', function ($query) use ($endDate, $startDate) {
             $query->whereBetween('departure_date', [$startDate,$endDate])->where('status', '=', 'PAID')->orWhere('status', '=', 'PROCESS');
              }
-        )->where('apartment_type_id', $apartment_type)
+        )->where('apartment_type_id', $apartment_type)->where('room_number','>=' ,$rooms)
             ->when($residential_complex, function($query) use ($residential_complex){
                 $query->where('residential_complex_id', $residential_complex);
+            })->withAvg('feedbacks','rate')
+            ->join('apartment_price_intervals' , function ($join) use ($minPrice, $maxPrice, $startDate, $endDate) {
+            $join->on('apartments.id','=','apartment_price_intervals.apartment_id');
+            $join->where('apartment_price_intervals.price','>=', $minPrice);
+            $join->where('apartment_price_intervals.price','<=', $maxPrice);
+            $join->where('apartment_price_intervals.start_date',"<=", $startDate);
+            $join->where('apartment_price_intervals.end_date',">=",$endDate);
+            $join->whereNotNull('apartment_price_intervals.end_date');
+        })->join('apartment_availability' , function ($join) use ($minPrice, $maxPrice, $startDate, $endDate) {
+                $join->on('apartments.id','=','apartment_availability.apartment_id');
+                $join->where('apartment_availability.state','=', 1);
+                $join->where('apartment_availability.start_date',"<=", $startDate);
+                $join->where('apartment_availability.end_date',">=", $endDate);
+                $join->whereNotNull('apartment_availability.end_date');
             })
-            ->join('apartment_prices' , function ($join) use ($minPrice, $maxPrice) {
-            $join->on('apartments.id','=','apartment_prices.apartment_id');
-            $join->where('apartment_prices.price','>=', $minPrice);
-            $join->where('apartment_prices.price','<=', $maxPrice);
-        })->orderBy($sortBy, $sort)->get();
-
+            ->orderBy($sortBy, $sort)->distinct()->paginate(10);
 
         return ApartmentResource::collection($apartment);
     }
@@ -190,7 +215,8 @@ class ApartmentController extends Controller
         $apartments = [];
         try {
             foreach ($request->all() as $item){
-                    Log::info($item['GUID']);
+                     Log::info("==========Create apartment===========");
+                    Log::info($item);
                     $currentComplex = ResidentialComplex::where('GUID', $item['apartmentComplex']['GUID'])->first();
 
                     if($currentComplex){

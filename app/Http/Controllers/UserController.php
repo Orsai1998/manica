@@ -121,10 +121,8 @@ class UserController extends Controller
             if($payment){
                  $paymentInfo = $this->paymentService->getPaymentInfo($token);
                  Log::info($paymentInfo);
-                  if($paymentInfo['status'] == 'successful' && $paymentInfo['subscription']['status'] == 'active'){
-                      $this->savePaymentMethod($paymentInfo['payment_method'], $paymentInfo['subscription']['token'], $payment['token']);
+                $this->savePaymentMethod($paymentInfo['payment_method'], $paymentInfo['subscription']['token'], $payment['token'], $paymentInfo['status']);
 
-                  }
                 return response()->json([
                    'success' => true
                 ]);
@@ -223,7 +221,7 @@ class UserController extends Controller
 
     }
 
-   protected function savePaymentMethod(array $paymentMethod, String $subscription_token, String $token){
+   protected function savePaymentMethod(array $paymentMethod, String $subscription_token, String $token, String $status){
 
         $user = Auth::user();
         if($user){
@@ -240,6 +238,7 @@ class UserController extends Controller
                 $userPayment->user_id = $user->id;
                 $userPayment->account = $paymentMethod['account'];
                 $userPayment->subscription_token = $subscription_token;
+                $userPayment->status = $status;
                 $userPayment->fingerprint = $paymentMethod['card']['fingerprint'];
                 $userPayment->bank = $paymentMethod['card']['bank'] ?? "";
                 $userPayment->brand = $paymentMethod['card']['brand'];;

@@ -18,6 +18,12 @@ class Payment extends Model
         $this->save();
     }
 
+    public function setSuccessStatus(){
+
+        $this->status = 'PAID';
+        $this->save();
+    }
+
     public function payment_method(){
 
         return $this->hasOne(UserPaymentCard::class,"id","user_card_id");

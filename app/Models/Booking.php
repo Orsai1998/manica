@@ -55,9 +55,9 @@ class Booking extends Model
     }
 
     public function status(){
-        if(Carbon::createFromDate($this->depature_date)  >= Carbon::now()){
+        if(Carbon::createFromDate($this->departure_date)  >= Carbon::now()){
             return 'Активная';
         }
-        return 'Не активная';
+        return 'Завершено';
     }
 }

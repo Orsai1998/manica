@@ -1,0 +1,13 @@
+SELECT
+    apartment_id,
+    state,
+    date as start_date,
+    price,
+    (
+        SELECT
+            MIN(mytablemin.date)
+        FROM apartment_prices AS mytablemin
+        WHERE mytablemin.date > apartment_prices.date
+            AND apartment_prices.apartment_id = mytablemin.apartment_id
+    ) AS NextDate
+FROM apartment_prices where NextDate != NULL

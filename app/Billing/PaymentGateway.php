@@ -169,10 +169,13 @@ class PaymentGateway
         ];
 
         try {
-            return $this->makeRequest('https://api.kassa.com/v1/payment/get', $requestArray);
+            $response = $this->makeRequest('https://api.kassa.com/v1/payment/get', $requestArray);
+            Log::info($response);
+            return $response;
+
         }catch (\Exception $exception){
             Log::channel('interpay-error')->error($exception);
-            throw new \Exception($exception->getMessage(). " ".$exception->getCode());
+            //throw new \Exception($exception->getMessage(). " ".$exception->getCode());
         }
     }
 

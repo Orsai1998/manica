@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable,SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -25,7 +26,9 @@ class User extends Authenticatable
         'password',
         'isFemale',
         'birth_date',
-        'avatar'
+        'avatar',
+        'one_c_guid',
+        'guid'
     ];
 
     /**
@@ -49,8 +52,12 @@ class User extends Authenticatable
 
     public function documents(){
         return $this->hasMany(UserDocument::class, 'user_id');
-
     }
+
+    public function getDocumentPhoto($type){
+        return $this->documents()->where('name','like', '%'.$type.'%')->first();
+    }
+
     public function payment_cards(){
 
         return $this->hasMany(UserPaymentCard::class, 'user_id');

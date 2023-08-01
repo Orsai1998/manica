@@ -29,6 +29,7 @@ Route::controller(App\Http\Controllers\Auth\SignUpController::class)->group(func
 
 Route::middleware('auth:sanctum')->group(function(){
     Route::get('user', [App\Http\Controllers\UserController::class, 'index'])->name('index');
+    Route::post('/user/delete', [App\Http\Controllers\Auth\AuthController::class, 'deleteAcc'])->name('deleteAcc');
     Route::post('/user/update', [App\Http\Controllers\UserController::class, 'update'])->name('update');
     Route::post('user/add_card', [App\Http\Controllers\UserController::class, 'addUserPaymentCard']);
     Route::post('user/set_default_card', [App\Http\Controllers\UserController::class, 'setDefaultCard']);
@@ -63,6 +64,7 @@ Route::get('/apartment',  [App\Http\Controllers\ApartmentController::class, 'get
 Route::get('/apartment_feedbacks',  [App\Http\Controllers\ApartmentController::class, 'getMoreFeedbacks']);
 
 Route::group(['prefix'=>'filter'], function(){
+
     Route::get('/apartment_types',  [App\Http\Controllers\ApartmentController::class, 'getApartmentTypes']);
     Route::get('/apartments',  [App\Http\Controllers\ApartmentController::class, 'getApartments']);
     Route::get('/residential_complexes',  [App\Http\Controllers\ApartmentController::class, 'getResidentialComplexes']);
@@ -75,5 +77,6 @@ Route::middleware('auth.basic')->group(function(){
         Route::post('/create_update_apartment',  [App\Http\Controllers\ApartmentController::class, 'createUpdateApartment']);
         Route::post('/create_price_list',  [App\Http\Controllers\IntegrationController::class, 'createApartmentPrices']);
         Route::post('/create_apartment_states',  [App\Http\Controllers\IntegrationController::class, 'createApartmentStates']);
+        Route::post('/create_user_debts',  [App\Http\Controllers\IntegrationController::class, 'createUserDebt']);
     });
 });
