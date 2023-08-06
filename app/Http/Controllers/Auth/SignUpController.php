@@ -32,8 +32,16 @@ class SignUpController extends Controller
     public function sendOtpToRegister(Request $request)
     {
 
+        $user = User::where('phone_number', $request->phone_number)->first();
+
+        if($user){
+            return response()->json([
+                'success'=>false,
+                'message'=>'Пользователь существует'
+            ]);
+        }
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|numeric|digits:11|unique:users'
+            'phone_number' => 'required|numeric|digits:11'
         ]);
 
         if ($validator->fails()) {
@@ -158,7 +166,7 @@ class SignUpController extends Controller
             }
             if($request->hasFile('front_ID')){
                 $frontId = $request->file('front_ID');
-                $frontIdName = $frontId->getClientOriginalName();
+                $frontIdName = $frontId->getClientOriginalName().".".$frontId->getExtension();
                 $frontIdPath = $frontId->storeAs('documents', $frontIdName, 'public');
 
                 if(!empty($frontIdPath)){
@@ -167,7 +175,7 @@ class SignUpController extends Controller
                         $userDoc->path = $frontIdPath;
                         $userDoc->save();
                     }else{
-                        $this->createUserDocument($user->id, $frontIdPath,'front');
+                        $this->createUserDocument($user->id, $frontIdPath,$frontIdName);
                     }
 
                 }
@@ -175,7 +183,7 @@ class SignUpController extends Controller
             }
             if($request->hasFile('back_ID')){
                 $backId = $request->file('back_ID');
-                $backIdName = $backId->getClientOriginalName();
+                $backIdName = $backId->getClientOriginalName().".".$backId->getExtension();
                 $backIdPath = $backId->storeAs('documents', $backIdName, 'public');
 
                 $userDoc = UserDocument::where('user_id', $user->id)->where('path', $backIdPath)->first();
@@ -183,7 +191,7 @@ class SignUpController extends Controller
                     $userDoc->path = $backIdPath;
                     $userDoc->save();
                 }else{
-                    $this->createUserDocument($user->id, $backIdPath,'back');
+                    $this->createUserDocument($user->id, $backIdPath,  $backIdName );
                 }
 
             }
@@ -193,9 +201,8 @@ class SignUpController extends Controller
             $user->birth_date = Carbon::createFromDate($request->input('birth_date'))->format("y.m.d");
             $user->save();
             $client = User::find($user->id);
-            $this->integrationService->createUpdateUser($client);
-
             DB::commit();
+            $this->integrationService->createUpdateUser($client);
             return response()->json([ 'success'=> true], 200);
 
         } catch (\Exception $exception){

@@ -128,72 +128,77 @@ class IntegrationController extends Controller
 
     public function createUserDebt(Request $request){
 
-        foreach ($request->all() as $item){
+        try {
+            foreach ($request->all() as $item){
 
-            if(empty($item['clientID'])){
-                return response()->json([
-                    'success'=>false,
-                    'message'=>'Client id not found'
-                ]);
-            }
-            if(empty($item['apartmentID'])){
-                return response()->json([
-                    'success'=>false,
-                    'message'=>'apartmentID id not found'
-                ]);
-            }
-            if(empty($item['paymentType'])){
-                return response()->json([
-                    'success'=>false,
-                    'message'=>'paymentType not found'
-                ]);
-            }
-            if(empty($item['balance'])){
-                return response()->json([
-                    'success'=>false,
-                    'message'=>'balance not found'
-                ]);
-            }
-            $apartment= Apartment::where('GUID', $item['apartmentID'])->first();
-            $user = User::where('guid', $item['clientID'])->first();
-            if(!$apartment){
-                return response()->json([
-                    'success'=>false,
-                    'message'=>'Apartment not found'
-                ]);
-            }
-            if(!$user){
-                return response()->json([
-                    'success'=>false,
-                    'message'=>'User not found'
-                ]);
-            }
-            /*****SAVE in DB START*****/
+                if(empty($item['clientID'])){
+                    return response()->json([
+                        'success'=>false,
+                        'message'=>'Client id not found'
+                    ]);
+                }
+                if(empty($item['apartmentID'])){
+                    return response()->json([
+                        'success'=>false,
+                        'message'=>'apartmentID id not found'
+                    ]);
+                }
+                if(empty($item['paymentType'])){
+                    return response()->json([
+                        'success'=>false,
+                        'message'=>'paymentType not found'
+                    ]);
+                }
+                if(empty($item['balance'])){
+                    return response()->json([
+                        'success'=>false,
+                        'message'=>'balance not found'
+                    ]);
+                }
+                $apartment= Apartment::where('GUID', $item['apartmentID'])->first();
+                $user = User::where('guid', $item['clientID'])->first();
+                if(!$apartment){
+                    return response()->json([
+                        'success'=>false,
+                        'message'=>'Apartment not found'
+                    ]);
+                }
+                if(!$user){
+                    return response()->json([
+                        'success'=>false,
+                        'message'=>'User not found'
+                    ]);
+                }
+                /*****SAVE in DB START*****/
 
-            $user_debt = UserDebt::where('client_id', $item['clientID'])
-                ->where('apartment_guid', $item['apartmentID'])
-                ->where('paymentType', $item['paymentType'])
-                ->where('balance', $item['balance'])->first();
+                $user_debt = UserDebt::where('client_id', $item['clientID'])
+                    ->where('apartment_guid', $item['apartmentID'])
+                    ->where('paymentType', $item['paymentType'])
+                    ->where('balance', $item['balance'])->first();
 
-            if(!$user_debt){
-                $user_debt = new UserDebt();
+                if(!$user_debt){
+                    $user_debt = new UserDebt();
+                }
+
+
+                $user_debt->user_id = $user->id;
+                $user_debt->client_id = $item['clientID'];
+                $user_debt->apartment_guid = $item['apartmentID'];
+                $user_debt->apartment_id = $apartment->id;
+                $user_debt->paymentType = $item['paymentType'];
+                $user_debt->balance = $item['balance'];
+                $user_debt->save();
             }
-
-
-            $user_debt->user_id = $user->id;
-            $user_debt->client_id = $item['clientID'];
-            $user_debt->apartment_guid = $item['apartmentID'];
-            $user_debt->apartment_id = $apartment->id;
-            $user_debt->paymentType = $item['paymentType'];
-            $user_debt->balance = $item['balance'];
-            $user_debt->save();
-
             return response()->json([
                 'success'=>true,
             ]);
-
-
+        }catch (\Exception $exception){
+            return response()->json([
+                'success'=>false,
+                'message' => $exception->getMessage()
+            ], 400);
         }
+
 
     }
 }

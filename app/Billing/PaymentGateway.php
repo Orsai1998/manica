@@ -3,11 +3,13 @@
 namespace App\Billing;
 
 use App\Models\Payment;
+use App\Models\User;
 use App\Models\UserPaymentCard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use KassaCom\SDK\Exception\ServerResponse\ResponseException;
 use KassaCom\SDK\Exception\TransportException;
 
@@ -54,7 +56,12 @@ class PaymentGateway
         }
 
         if($response->failed()) {
-            Log::error($response);
+            $responseMes = $response->json();
+
+            if($responseMes['message']){
+                throw new \Exception($responseMes['error'].' '.$responseMes['message']);
+            }
+
             throw new \Exception('Api service error with status: '.$response->status(), $response->status());
         }
     }
@@ -74,6 +81,8 @@ class PaymentGateway
                 "payment_method" => "card",
                 'wallet_id' => 8413,
                 'create_subscription' => true,
+                'is_test' => true,
+                'notification_url' => 'https://hh.foxstudy.kz/api/payment_response',
             ],
             'custom_parameters' => [
                 "order_id" => $orderId
@@ -87,14 +96,16 @@ class PaymentGateway
         try {
             $createPaymentResponse =  $this->makeRequest('https://api.kassa.com/v1/payment/create', $requestArray);
 
-            if($createPaymentResponse){
+            if(empty($createPaymentResponse['token'])){
+                throw new \Exception(json_encode($createPaymentResponse));
 
-                return [
-                    'ip' => $createPaymentResponse['ip'],
-                    'token' => $createPaymentResponse['token']
-                ];
             }
             DB::commit();
+            return [
+                'ip' => $createPaymentResponse['ip'],
+                'token' => $createPaymentResponse['token']
+            ];
+
         } catch (\Exception $e) {
             Log::channel('interpay-error')->error($e);
             throw new \Exception($e->getMessage());
@@ -125,7 +136,8 @@ class PaymentGateway
     }
 
 
-    public function refundPayment(String $token, String $amount, String $description){
+    public function refundPayment(String $token, $external_id,$user_card_id, String $amount, String $description){
+        $user = User::find(Auth::user()->id);
         $requestArray = [
             'token' => $token,
             'refund' => [
@@ -136,12 +148,27 @@ class PaymentGateway
         ];
 
         try {
+            $this->createPaymentLogForRefund($user,$external_id, $user_card_id, $amount,$token);
             return $this->makeRequest('https://api.kassa.com/v1/refund/create', $requestArray);
 
         }catch (\Exception $exception){
             Log::channel('interpay-error')->error($exception);
             throw new \Exception($exception->getMessage(). " ".$exception->getCode());
         }
+    }
+
+    protected function createPaymentLogForRefund(User $user, $booking_id = 0, $user_card_id = 0, $total_sum, $token = ''){
+        $payment = new Payment();
+        $payment->user_id = $user->id;
+        $payment->booking_id = $booking_id;
+        $payment->user_card_id = $user_card_id;
+        $payment->total_sum = -$total_sum;
+        $payment->payment_token = $token;
+        $payment->paymentType = 'refund';
+        $payment->guid = (string) Str::uuid();
+        $payment->save();
+
+        return $payment;
     }
 
     public function cancelPayment(String $token){

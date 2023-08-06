@@ -4,12 +4,14 @@ namespace App\Services;
 
 
 use App\Models\Booking;
+use App\Models\Payment;
 use App\Models\User;
 use App\Models\UserDocument;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class IntegrationOneCService
@@ -88,8 +90,6 @@ class IntegrationOneCService
                 Log::error($exception);
                 throw new \Exception($exception->getMessage());
             }
-        }else{
-            echo 'Нет документов';
         }
 
     }
@@ -99,7 +99,7 @@ class IntegrationOneCService
         $url = $this->url.'/create_update_user';
         $requestArray = [
             'clientID' => $user->guid,
-            'description' => "test123",
+            'description' => $user->name. " ".$user->phone_number,
             'bdate' => $user->birth_date,
             'sex' => $user->isFemale ? "f" : "m",
             'phoneNumber' => $user->phone_number,
@@ -120,7 +120,7 @@ class IntegrationOneCService
             $user->one_c_guid =  $response['GUID'];
             $user->save();
 
-            $this->sendUserDocuments($user);
+
 
         }catch (\Exception $exception){
             Log::error($exception);
@@ -147,6 +147,9 @@ class IntegrationOneCService
         try {
 
             $response = $this->makeRequest($url, $requestArray);
+            if(!array_key_exists('success', $response)){
+                throw new \Exception(json_encode($response));
+            }
             if(!$response['success']){
                 throw new \Exception($this->parseError($response['error']));
             }
@@ -178,7 +181,6 @@ class IntegrationOneCService
 
         try {
             $response = $this->makeRequest($url, $requestArray);
-            Log::info($response);
             if(!array_key_exists('success', $response)){
                 throw new \Exception(json_encode($response));
             }
@@ -209,6 +211,10 @@ class IntegrationOneCService
 
         try {
             $response = $this->makeRequest($url, $requestArray);
+            if(!array_key_exists('success', $response)){
+                Log::error($response);
+                throw new \Exception(json_encode($response));
+            }
             if(!$response['success']){
                 throw new \Exception($this->parseError($response['error']));
             }
@@ -218,27 +224,7 @@ class IntegrationOneCService
         }
     }
 
-    public function addUserDocuments($image, $clientId){
 
-        $url = $this->url.'/send_client_document';
-
-        try {
-            $response = Http::withBasicAuth($this->username, $this->password)->withBody(
-                file_get_contents($image->path()), // Content of the image
-                $image->getClientOriginalName(),   // Original image name
-                'image/jpeg'                       // MIME type of the image (change as per your image type)
-            )->withOptions([
-                'multipart' => true, // Set the request as a multipart/form-data request
-            ])->post($url, [
-                'clientId' => $clientId,           // Additional key-value pair
-            ]);
-
-            Log::info($response);
-        }catch (\Exception $exception){
-           throw $exception;
-        }
-
-    }
 
     protected function parseError(Array $response): string
     {
@@ -261,6 +247,10 @@ class IntegrationOneCService
 
             try {
                 $response = $this->makeRequest($url, $requestArray);
+                if(!array_key_exists('success', $response)){
+                    Log::error($response);
+                    throw new \Exception(json_encode($response));
+                }
                 if(!$response['success']){
                     throw new \Exception($this->parseError($response['error']));
                 }

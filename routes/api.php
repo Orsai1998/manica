@@ -70,7 +70,7 @@ Route::group(['prefix'=>'filter'], function(){
     Route::get('/residential_complexes',  [App\Http\Controllers\ApartmentController::class, 'getResidentialComplexes']);
     Route::get('/living_conditions',  [App\Http\Controllers\ApartmentController::class, 'getLivingConditions']);
 });
-
+Route::get('/payment_response',  [App\Http\Controllers\PaymentController::class, 'paymentResponse']);
 Route::middleware('auth.basic')->group(function(){
     Route::group(['prefix'=>'integration'], function(){
         Route::post('/create_update_apartment_complex',  [App\Http\Controllers\ApartmentController::class, 'createUpdateApartmentComplex']);

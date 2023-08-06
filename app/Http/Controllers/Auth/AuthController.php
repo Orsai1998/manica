@@ -51,6 +51,7 @@ class AuthController extends Controller
     {
         try {
             $user = User::where('phone_number', $phone_number)->first();
+
             if(!$user){
                 throw new \Exception('User not found');
             }

@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Billing\PaymentGateway;
 use App\Http\Resources\UserResource;
+use App\Jobs\ProcessPaymentsCard;
+use App\Models\Payment;
+use App\Models\User;
 use App\Models\UserDocument;
 use App\Models\UserPaymentCard;
 use Illuminate\Http\Request;
@@ -12,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -104,8 +108,11 @@ class UserController extends Controller
         }
 
         try {
-        $payment =  $this->paymentService->createPayment($amount, "1");
 
+            $user = User::find($user->id);
+            $paymentLocal = $this->createPayment($user);
+            $payment =  $this->paymentService->createPayment($amount, $paymentLocal->guid);
+            $paymentLocal->setToken($payment['token']);
             $token = $payment['token'];
             $ip = $payment['ip'];
             $paymentMethod = [
@@ -121,7 +128,7 @@ class UserController extends Controller
             if($payment){
                  $paymentInfo = $this->paymentService->getPaymentInfo($token);
                  Log::info($paymentInfo);
-                $this->savePaymentMethod($paymentInfo['payment_method'], $paymentInfo['subscription']['token'], $payment['token'], $paymentInfo['status']);
+                $this->savePaymentMethod($paymentInfo['payment_method'], $paymentInfo['subscription']['token'], $payment['token'], $paymentInfo['status'], $this->paymentService);
 
                 return response()->json([
                    'success' => true
@@ -138,6 +145,19 @@ class UserController extends Controller
                 'message'=> $exception->getMessage()
             ]);
         }
+    }
+    protected function createPayment(User $user){
+        $payment = new Payment();
+        $payment->user_id = $user->id;
+        $payment->booking_id = 0;
+        $payment->user_card_id = 0;
+        $payment->total_sum = '10';
+        $payment->payment_token = '';
+        $payment->paymentType = 'ADD_CARD';
+        $payment->guid = (string) Str::uuid();
+        $payment->save();
+
+        return $payment;
     }
 
     public function deleteDocument(Request $request){
@@ -221,7 +241,7 @@ class UserController extends Controller
 
     }
 
-   protected function savePaymentMethod(array $paymentMethod, String $subscription_token, String $token, String $status){
+   protected function savePaymentMethod(array $paymentMethod, String $subscription_token, String $token, String $status, PaymentGateway $paymentService){
 
         $user = Auth::user();
         if($user){
@@ -231,7 +251,7 @@ class UserController extends Controller
                     ->where('user_id', $user->id)->first();
 
                 if($userPayment){
-                    $this->paymentService->refundPayment($token, 10, "Отмена покупки");
+                    $this->paymentService->refundPayment($token,0,0,10, "Отмена покупки");
                     throw new \Exception('Такой метод оплаты уже существует');
                 }
                 $userPayment = new UserPaymentCard();
@@ -245,8 +265,15 @@ class UserController extends Controller
                 $userPayment->is_main = count($user->payment_cards) > 0 ? 0 : 1;
                 $userPayment->save();
 
-                //Возврат суммы после привязки карты
-                $this->paymentService->refundPayment($token, 10, "Отмена покупки");
+                $payment = Payment::where('payment_token', $token)->first();
+                $payment->user_card_id = $userPayment->id;
+                $payment->save();
+                ProcessPaymentsCard::dispatch($paymentService, $payment,$userPayment);
+//                //Возврат суммы после привязки карты
+//                if($status == 'success'){
+//                    $this->paymentService->refundPayment($token,0 ,0,10, "Отмена покупки");
+//                }
+
 
               DB::commit();
             }catch (\Exception $exception){

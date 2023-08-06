@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Billing\PaymentGateway;
 use App\Http\Resources\BookingDetailResource;
 use App\Http\Resources\UserBookingsResource;
+use App\Jobs\ProcessPayment;
 use App\Models\Apartment;
 use App\Models\Booking;
 use App\Models\CompanyInfo;
@@ -125,9 +126,7 @@ class BookingController extends Controller
             $paymentDepozit = $this->createPayment($user, $userPaymentCard, $booking->id, $request->deposit, "depozit");
             $paymentAccomidation = $this->createPayment($user, $userPaymentCard, $booking->id, $request->total_sum, "accommodation");
 
-            /*Отправка в 1с*/
-            $this->integrationService->createPayment($booking, $user,"depozit" ,$request->deposit, $paymentDepozit->guid);
-            $this->integrationService->createPayment($booking, $user,"accommodation" ,$request->total_sum, $paymentAccomidation->guid);
+
 
             /*Отправка платежа за проживание в Kassa.com*/
             $paymentService =  $this->paymentService->createPayment($request->total_sum, $paymentAccomidation->guid,
@@ -135,14 +134,15 @@ class BookingController extends Controller
                 $userPaymentCard->subscription_token);
 
 
-            $payment->setToken($paymentService['token']);
+            $paymentAccomidation->setToken($paymentService['token']);
             $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
 
             if($paymentInfo['status'] == 'successful'){
-                $this->changeStatusToPaid($booking->id,$payment->id);
+                $this->changeStatusToPaid($booking->id,$paymentAccomidation->id);
             }else{
                 Log::info('Статус оплаты брони №'. $booking->id. ' '. $paymentInfo['status']);
-                $this->changeStatusToUnknown($booking->id, $payment->id, $paymentInfo['status']);
+                $this->changeStatusToUnknown($booking->id, $paymentAccomidation->id, $paymentInfo['status']);
+                ProcessPayment::dispatch($this->paymentService, $paymentAccomidation);
             }
 
             $paymentService =  $this->paymentService->createPayment($request->deposit, $paymentDepozit->guid,
@@ -150,16 +150,20 @@ class BookingController extends Controller
                 $userPaymentCard->subscription_token);
 
 
-            $payment->setToken($paymentService['token']);
+            $paymentDepozit->setToken($paymentService['token']);
             $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
 
             if($paymentInfo['status'] == 'successful'){
-                $this->changeStatusToPaid($booking->id,$payment->id);
+                $this->changeStatusToPaid($booking->id,$paymentDepozit->id);
             }else{
                 Log::info('Статус оплаты депозита брони №'. $booking->id. ' '. $paymentInfo['status']);
-                $this->changeStatusToUnknown($booking->id, $payment->id, $paymentInfo['status']);
+                $this->changeStatusToUnknown($booking->id, $paymentDepozit->id, $paymentInfo['status']);
+                ProcessPayment::dispatch($this->paymentService, $paymentDepozit);
             }
 
+            /*Отправка в 1с*/
+            $this->integrationService->createPayment($booking, $user,"depozit" ,$request->deposit, $paymentDepozit->guid);
+            $this->integrationService->createPayment($booking, $user,"accommodation" ,$request->total_sum, $paymentAccomidation->guid);
 
             DB::commit();
             return response()->json(['success'=> true]);
@@ -201,7 +205,7 @@ class BookingController extends Controller
             $payment = Payment::where('booking_id', $booking->id)->first();
             if($payment){
                 if(!empty($payment->payment_token)){
-                    $this->paymentService->refundPayment($payment->payment_token,$payment->total_sum, 'Отмена брони №'. $booking->id);
+                    $this->paymentService->refundPayment($payment->payment_token,$booking->id, $booking->getPaymentMethodId(),$payment->total_sum, 'Отмена брони №'. $booking->id);
                 }
             }
 

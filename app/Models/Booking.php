@@ -32,7 +32,19 @@ class Booking extends Model
             return new UserPaymentCardResource($user_card);
 
         }
-        return "";
+        return 0;
+    }
+    public function getPaymentMethodId(){
+
+        $payment = Payment::where('booking_id', $this->id)->first();
+
+        if($payment){
+            $user_card = UserPaymentCard::withTrashed()->where('id', $payment->user_card_id)->first();
+
+            return $user_card->id;
+
+        }
+        return 0;
     }
 
     public function getKeyLock(){
