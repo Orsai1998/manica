@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Billing\PaymentGateway;
 use App\Http\Controllers\Controller;
+use App\Jobs\SendUserDocuments;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserDocument;
@@ -202,7 +203,10 @@ class SignUpController extends Controller
             $user->save();
             $client = User::find($user->id);
             DB::commit();
+
             $this->integrationService->createUpdateUser($client);
+            SendUserDocuments::dispatch($user, $this->integrationService);
+
             return response()->json([ 'success'=> true], 200);
 
         } catch (\Exception $exception){

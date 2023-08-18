@@ -195,7 +195,7 @@ class IntegrationOneCService
     }
 
     public function changeBooking(Booking $booking, User $user){
-        $url = $this->url.'/create_payment';
+        $url = $this->url.'/change_reservation';
         $requestArray = [
             'client' => [
                 "description" => $user->name,
@@ -204,8 +204,8 @@ class IntegrationOneCService
             ],
             "apartmentID" =>  $booking->apartments->GUID,
             "reservationId" => $booking->one_c_guid,
-            "checkIn" =>  $booking->entry_date,
-            "checkOut" =>  $booking->depature_date,
+            "checkIn" => $booking->entry_date,
+            "checkOut" =>  $booking->departure_date,
             "note" =>  "Изменение брони №".$booking->id,
         ];
 

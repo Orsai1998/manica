@@ -41,7 +41,6 @@ class ProcessPaymentsCard implements ShouldQueue
     {
         if($this->payment->status == 'PENDING'){
             $response = $this->paymentService->getPaymentInfo($this->payment->payment_token);
-            print_r($response);
             if(!empty($response)){
                 if($response['status'] == 'successful'){
                     $this->payment->setSuccessStatus();

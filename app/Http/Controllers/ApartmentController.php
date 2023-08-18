@@ -345,6 +345,14 @@ class ApartmentController extends Controller
             ]);
         }
 
+        $feedback = ApartmentFeedback::where('apartment_id', $request->apartment_id)->where('user_id', $user->id)->first();
+
+        if($feedback){
+            return response()->json([
+                'success'=>false,
+                'message' => 'Вами уже добавлен отзыв'
+            ]);
+        }
         ApartmentFeedback::create([
             'apartment_id' => $request->apartment_id,
             'user_id' => $user->id,

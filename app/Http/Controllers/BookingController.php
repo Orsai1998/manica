@@ -27,6 +27,7 @@ class BookingController extends Controller
 
     protected $paymentService;
     protected $integrationService;
+    protected $deposit_sum = 20000;
     public function __construct(PaymentGateway $paymentService, IntegrationOneCService $integrationService)
     {
         $this->paymentService = $paymentService;
@@ -88,6 +89,10 @@ class BookingController extends Controller
             ]);
         }
 
+        if($request->deposit == 0){
+            $request->deposit = $this->deposit_sum;
+        }
+
         if($request->is_business_trip_reservation){
             $company =  CompanyInfo::where('user_id', $user->id)->first();
 
@@ -122,36 +127,43 @@ class BookingController extends Controller
             $user = User::find($user->id);
 
             $booking->update($request->all());
-            $this->integrationService->createBooking($booking, $user);
+
             $paymentDepozit = $this->createPayment($user, $userPaymentCard, $booking->id, $request->deposit, "depozit");
             $paymentAccomidation = $this->createPayment($user, $userPaymentCard, $booking->id, $request->total_sum, "accommodation");
 
 
+            try {
 
-            /*Отправка платежа за проживание в Kassa.com*/
-            $paymentService =  $this->paymentService->createPayment($request->total_sum, $paymentAccomidation->guid,
-                "Оплата брони №".$booking->id." в приложений MANICA.kz",
-                $userPaymentCard->subscription_token);
+                /*Отправка платежа за проживание в Kassa.com*/
+                $paymentService =  $this->paymentService->createPayment($request->total_sum, $paymentAccomidation->guid,
+                    "Оплата брони №".$booking->id." в приложений MANICA.kz",
+                    $userPaymentCard->subscription_token);
 
 
-            $paymentAccomidation->setToken($paymentService['token']);
-            $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
+                $paymentAccomidation->setToken($paymentService['token']);
+                $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
 
-            if($paymentInfo['status'] == 'successful'){
-                $this->changeStatusToPaid($booking->id,$paymentAccomidation->id);
-            }else{
-                Log::info('Статус оплаты брони №'. $booking->id. ' '. $paymentInfo['status']);
-                $this->changeStatusToUnknown($booking->id, $paymentAccomidation->id, $paymentInfo['status']);
-                ProcessPayment::dispatch($this->paymentService, $paymentAccomidation);
+                if($paymentInfo['status'] == 'successful'){
+                    $this->changeStatusToPaid($booking->id,$paymentAccomidation->id);
+                }else{
+                    Log::info('Статус оплаты брони №'. $booking->id. ' '. $paymentInfo['status']);
+                    $this->changeStatusToUnknown($booking->id, $paymentAccomidation->id, $paymentInfo['status']);
+                    ProcessPayment::dispatch($this->paymentService, $paymentAccomidation);
+                }
+
+                $paymentService =  $this->paymentService->createPayment($request->deposit, $paymentDepozit->guid,
+                    "Оплата депозита брони №".$booking->id." в приложений MANICA.kz",
+                    $userPaymentCard->subscription_token);
+
+
+                $paymentDepozit->setToken($paymentService['token']);
+                $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
+            }catch (\Exception $exception){
+                return response()->json([
+                    'success'=>false,
+                    'message'=>$exception->getMessage()
+                ], 500);
             }
-
-            $paymentService =  $this->paymentService->createPayment($request->deposit, $paymentDepozit->guid,
-                "Оплата депозита брони №".$booking->id." в приложений MANICA.kz",
-                $userPaymentCard->subscription_token);
-
-
-            $paymentDepozit->setToken($paymentService['token']);
-            $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
 
             if($paymentInfo['status'] == 'successful'){
                 $this->changeStatusToPaid($booking->id,$paymentDepozit->id);
@@ -162,6 +174,7 @@ class BookingController extends Controller
             }
 
             /*Отправка в 1с*/
+            $this->integrationService->createBooking($booking, $user);
             $this->integrationService->createPayment($booking, $user,"depozit" ,$request->deposit, $paymentDepozit->guid);
             $this->integrationService->createPayment($booking, $user,"accommodation" ,$request->total_sum, $paymentAccomidation->guid);
 
@@ -193,7 +206,7 @@ class BookingController extends Controller
             ]);
         }
 
-
+        DB::beginTransaction();
         try {
             $booking = Booking::where('id', $request->booking_id)->where('user_id', $user->id)->first();
            if(!$booking){
@@ -213,11 +226,14 @@ class BookingController extends Controller
             $payment->status = 'CANCELED';
             $payment->save();
             $booking->save();
+            DB::commit();
             $this->integrationService->cancelBooking($booking);
+
             return response()->json([
                 'success'=>true,
             ]);
         }catch (\Exception $exception){
+            DB::rollback();
             Log::error($exception);
             return response()->json([
                 'success'=>false,
@@ -317,7 +333,7 @@ class BookingController extends Controller
             $user = User::find($user->id);
             $userPaymentCard = $user->payment_cards->where('is_main','=','1')->first();
             //Создаем локальный платеж
-            $payment = $this->createPayment($user, $userPaymentCard, $booking->id, $request->total_sum);
+            $payment = $this->createPayment($user, $userPaymentCard, $booking->id, $request->total_sum,"accommodation");
             //Создаем платеж на стороне kassa.com
             $paymentService =  $this->paymentService->createPayment($request->total_sum, $payment->id,
                 "Оплата продлений брони №".$booking->id." в приложений MANICA.kz",
@@ -336,6 +352,7 @@ class BookingController extends Controller
                 $message = 'Статус оплаты брони №'. $booking->id. ' '. $paymentInfo['status'];
                 $this->changeStatusToUnknown($booking->id, $payment->id, $paymentInfo['status']);
             }
+            $this->integrationService->changeBooking($booking, $user);
 
             DB::commit();
             return response()->json([
