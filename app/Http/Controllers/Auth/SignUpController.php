@@ -115,11 +115,12 @@ class SignUpController extends Controller
         $userPhone = User::where('phone_number', $request->phone_number)->first();
 
         if($userPhone){
-            return response()->json([
-                'success'=>false,
-                'message' => 'Клиент с таким номером уже существует'
-            ], 400);
+            if($userPhone->trashed()){
+                $userPhone->restore();
+                return $this->respondWithToken($user->createToken('TOKEN')->plainTextToken);
+            }
         }
+
         $user = User::create([
             'name' => 'TEMP',
             'email' => $request->phone_number.'@mail.ru',

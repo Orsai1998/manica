@@ -90,7 +90,8 @@ class ApartmentController extends Controller
 
         $apartment = Apartment::query()->orDoesntHave('bookings')->orWhereDoesntHave(
             'bookings', function ($query) use ($endDate, $startDate) {
-            $query->whereBetween('departure_date', [$startDate,$endDate])->where('status', '=', 'PAID')->orWhere('status', '=', 'PROCESS');
+            $query->whereBetween('departure_date', [$startDate,$endDate])->where('status', '=', 'PAID')
+                ->orWhere('status', '=', 'PROCESS')->orWhere('status', '=', 'CANCELED');
              }
         )->where('apartment_type_id', $apartment_type)->where('room_number','>=' ,$rooms)
             ->when($residential_complex, function($query) use ($residential_complex){

@@ -62,4 +62,8 @@ class User extends Authenticatable
 
         return $this->hasMany(UserPaymentCard::class, 'user_id');
     }
+
+    public function getUserDebts(){
+        return $this->hasMany(UserDebt::class,'user_id');
+    }
 }

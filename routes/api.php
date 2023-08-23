@@ -31,7 +31,9 @@ Route::middleware('auth:sanctum')->group(function(){
     Route::get('user', [App\Http\Controllers\UserController::class, 'index'])->name('index');
     Route::post('/user/delete', [App\Http\Controllers\Auth\AuthController::class, 'deleteAcc'])->name('deleteAcc');
     Route::post('/user/update', [App\Http\Controllers\UserController::class, 'update'])->name('update');
+    Route::post('/user/avatar_delete', [App\Http\Controllers\UserController::class, 'deleteAvatar'])->name('update');
     Route::post('user/add_card', [App\Http\Controllers\UserController::class, 'addUserPaymentCard']);
+    Route::get('user/getUserDebt', [App\Http\Controllers\UserController::class, 'getUserDebt']);
     Route::post('user/set_default_card', [App\Http\Controllers\UserController::class, 'setDefaultCard']);
     Route::post('user/delete_card', [App\Http\Controllers\UserController::class, 'deletePaymentCard']);
     Route::post('user/delete_document', [App\Http\Controllers\UserController::class, 'deleteDocument']);

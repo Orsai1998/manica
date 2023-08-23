@@ -24,6 +24,12 @@ class Payment extends Model
         $this->save();
     }
 
+    public function setErrorStatus(){
+
+        $this->status = 'error';
+        $this->save();
+    }
+
     public function payment_method(){
 
         return $this->hasOne(UserPaymentCard::class,"id","user_card_id");

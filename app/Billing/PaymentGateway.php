@@ -2,6 +2,7 @@
 
 namespace App\Billing;
 
+use App\Jobs\ProcessPaymentsCard;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\UserPaymentCard;
@@ -66,7 +67,7 @@ class PaymentGateway
         }
     }
 
-    public function createPayment($amount, $orderId, $description = "", $subscription_token = ""){
+    public function createPayment($amount, $orderId, $description = "", $subscription_token = "", $payment_reason = "accommodation"){
 
         $requestArray = [
             "partner_payment_id" => $orderId,
@@ -85,7 +86,8 @@ class PaymentGateway
                 'notification_url' => 'https://hh.foxstudy.kz/api/payment_response',
             ],
             'custom_parameters' => [
-                "order_id" => $orderId
+                "order_id" => $orderId,
+                "payment_reason" => $payment_reason
             ],
         ];
 
@@ -187,6 +189,50 @@ class PaymentGateway
             Log::channel('interpay-error')->error($exception);
             throw new \Exception($exception->getMessage(). " ".$exception->getCode());
         }
+    }
+
+    public function savePaymentMethod(array $paymentMethod, String $subscription_token, String $token, String $status, PaymentGateway $paymentService){
+
+        $user = Auth::user();
+        if($user){
+            DB::beginTransaction();
+            try {
+                $userPayment = UserPaymentCard::where('fingerprint', $paymentMethod['card']['fingerprint'])
+                    ->where('user_id', $user->id)->first();
+
+                if($userPayment){
+                    //$this->paymentService->refundPayment($token,0,0,10, "Отмена покупки");
+                    throw new \Exception('Такой метод оплаты уже существует');
+                }
+                $userPayment = new UserPaymentCard();
+                $userPayment->user_id = $user->id;
+                $userPayment->account = $paymentMethod['account'];
+                $userPayment->subscription_token = $subscription_token;
+                $userPayment->status = $status;
+                $userPayment->fingerprint = $paymentMethod['card']['fingerprint'];
+                $userPayment->bank = $paymentMethod['card']['bank'] ?? "";
+                $userPayment->brand = $paymentMethod['card']['brand'];;
+                $userPayment->is_main = count($user->payment_cards) > 0 ? 0 : 1;
+                $userPayment->save();
+
+                $payment = Payment::where('payment_token', $token)->first();
+                $payment->user_card_id = $userPayment->id;
+                $payment->save();
+                ProcessPaymentsCard::dispatch($paymentService, $payment,$userPayment);
+//                //Возврат суммы после привязки карты
+//                if($status == 'success'){
+//                    $this->paymentService->refundPayment($token,0 ,0,10, "Отмена покупки");
+//                }
+
+                DB::commit();
+
+            }catch (\Exception $exception){
+                Log::error($exception);
+                DB::rollBack();
+                throw new \Exception($exception->getMessage(). " ".$exception->getCode());
+            }
+        }
+
     }
 
     public function getPaymentInfo(String $token){

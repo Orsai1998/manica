@@ -25,6 +25,7 @@ class ProcessPaymentsCard implements ShouldQueue
     protected $paymentCard;
     protected $paymentService;
     public $tries = 3;
+
     public function __construct(PaymentGateway $paymentService, Payment $payment, UserPaymentCard $paymentCard)
     {
         $this->payment = $payment;

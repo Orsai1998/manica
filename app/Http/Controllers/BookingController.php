@@ -265,10 +265,10 @@ class BookingController extends Controller
         $now = Carbon::now()->format('Y-m-d');
         if($active == 1){
             $booking = Booking::where('user_id', $user->id)
-                ->whereDate('departure_date','>=',$now)->get();
+                ->whereDate('departure_date','>=',$now)->where('status','!=', 'CANCELED')->get();
         } else{
             $booking = Booking::where('user_id', $user->id)
-                ->whereDate('departure_date','<',$now)->get();
+                ->whereDate('departure_date','<',$now)->where('status','!=', 'CANCELED')->get();
         }
 
         return UserBookingsResource::collection($booking);

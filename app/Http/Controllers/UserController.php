@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Billing\PaymentGateway;
+use App\Http\Resources\UserDebtsResource;
 use App\Http\Resources\UserResource;
 use App\Jobs\ProcessPaymentsCard;
 use App\Models\Payment;
@@ -108,13 +109,13 @@ class UserController extends Controller
         }
 
         try {
-
             $user = User::find($user->id);
             $paymentLocal = $this->createPayment($user);
-            $payment =  $this->paymentService->createPayment($amount, $paymentLocal->guid);
+            $payment =  $this->paymentService->createPayment($amount, $paymentLocal->guid,"","","add_card");
             $paymentLocal->setToken($payment['token']);
             $token = $payment['token'];
             $ip = $payment['ip'];
+
             $paymentMethod = [
                 'card_number' => $request->card_number,
                 'type' => 'card',
@@ -127,9 +128,15 @@ class UserController extends Controller
 
             if($payment){
                  $paymentInfo = $this->paymentService->getPaymentInfo($token);
-                 Log::info($paymentInfo);
-                $this->savePaymentMethod($paymentInfo['payment_method'], $paymentInfo['subscription']['token'], $payment['token'], $paymentInfo['status'], $this->paymentService);
 
+                try {
+                    $this->paymentService->savePaymentMethod($paymentInfo['payment_method'], $paymentInfo['subscription']['token'], $payment['token'], $paymentInfo['status'], $this->paymentService);
+                }catch (\Exception $exception){
+                    return response()->json([
+                        'success' => false,
+                        'message' => $exception->getMessage()
+                    ]);
+                }
                 return response()->json([
                    'success' => true
                 ]);
@@ -181,6 +188,25 @@ class UserController extends Controller
         ]);
     }
 
+    public function getUserDebt(){
+        $user = Auth::user();
+
+        if($user->getUserDebts){
+            return UserDebtsResource::collection($user->getUserDebts);
+        }
+    }
+    public function deleteAvatar(){
+        $user = Auth::user();
+
+        $user = User::find($user->id);
+
+        $user->avatar = null;
+        $user->save();
+
+        return response()->json([
+            'success'=>true,
+        ]);
+    }
     public function setDefaultCard(Request $request){
         $user = Auth::user();
         $validator = Validator::make($request->all(), [
@@ -251,7 +277,7 @@ class UserController extends Controller
                     ->where('user_id', $user->id)->first();
 
                 if($userPayment){
-                    $this->paymentService->refundPayment($token,0,0,10, "Отмена покупки");
+                    //$this->paymentService->refundPayment($token,0,0,10, "Отмена покупки");
                     throw new \Exception('Такой метод оплаты уже существует');
                 }
                 $userPayment = new UserPaymentCard();
