@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 
 class Apartment extends Model
 {
@@ -18,8 +20,28 @@ class Apartment extends Model
         return $this->belongsTo(ResidentialComplex::class,'residential_complex_id','id');
     }
 
-    public function photos() : HasMany{
-        return $this->hasMany(ApartmentPhoto::class,'apartment_id');
+    public function photos(){
+        $directory = 'storage/apartments/'.$this->GUID;
+
+        if (File::exists($directory) && File::isDirectory($directory)) {
+            $files = File::files($directory);
+
+            $imageFiles = array_filter($files, function ($file) {
+                return strpos(File::mimeType($file), 'image') === 0;
+            });
+            $images = [];
+            foreach ($imageFiles as $key => $image) {
+                $images[] = [
+                    "id" => $key,
+                    "is_main" => $key == 0,
+                    "path" => asset(('/' . str_replace('/storage/', '', Storage::url($image))))
+                ];
+            }
+            return $images;
+        }
+         else {
+            return "";
+        }
     }
 
     public function living_conditions(){
@@ -60,12 +82,27 @@ class Apartment extends Model
     }
 
     public function mainPhoto(){
-       $photo =  $this->photos()->where('is_main', '=','1')->first();
+        $directory = 'storage/apartments/'.$this->GUID;
 
-       if($photo){
-           return asset('storage/'.$photo->path);
-       }
-       return  "";
+        if (File::exists($directory) && File::isDirectory($directory)) {
+            $files = File::files($directory);
+
+            $imageFiles = array_filter($files, function ($file) {
+                return strpos(File::mimeType($file), 'image') === 0;
+            });
+
+            $firstImageFile = reset($imageFiles);
+
+            if ($firstImageFile) {
+                return asset(('/'.str_replace('/storage/', '',  Storage::url($firstImageFile))));
+
+
+            } else {
+              return "";
+            }
+        } else {
+            return "";
+        }
     }
 
     public function favorites(){

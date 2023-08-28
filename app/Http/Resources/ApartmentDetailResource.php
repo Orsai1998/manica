@@ -16,13 +16,14 @@ class ApartmentDetailResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'photos' => $this->photos,
+            'photos' => $this->photos(),
             'area' => $this->area,
             'residential_complex_name' => $this->residential_complex->name ?? "",
             'organization_name' => $this->residential_complex->organization->name ?? "",
             'room_number' => $this->room_number,
             'flat_number' => $this->flat,
             'floor' => $this->floor,
+            'depozit' => 20000,
             'block' => $this->block,
             'entrance' => $this->entrance,
             'price' => $this->prices->price,

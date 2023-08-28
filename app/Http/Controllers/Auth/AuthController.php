@@ -127,6 +127,7 @@ class AuthController extends Controller
         $userAcc = User::find($user->id);
 
         if($userAcc){
+            Auth::user()->currentAccessToken()->delete();
             $userAcc->delete();
         }
 

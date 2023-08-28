@@ -71,7 +71,7 @@ class IntegrationController extends Controller
 
     public function createApartmentStates(Request $request){
 
-
+        Log::info("==========Create apartment state===========");
         $validator = Validator::make($request->all(), [
             '*.GUID' => 'required',
             '*.states' => 'required',
@@ -83,6 +83,7 @@ class IntegrationController extends Controller
                 'message'=>$validator->errors()
             ]);
         }
+        Log::info($request->all());
 
         try {
             foreach ($request->all() as $item){
@@ -111,7 +112,7 @@ class IntegrationController extends Controller
                     }
                 }
             }
-
+            Log::info("==========Create apartment state END===========");
             return response()->json([
                 'success'=>true,
             ]);

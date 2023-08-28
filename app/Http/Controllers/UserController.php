@@ -130,7 +130,13 @@ class UserController extends Controller
                  $paymentInfo = $this->paymentService->getPaymentInfo($token);
 
                 try {
-                    $this->paymentService->savePaymentMethod($paymentInfo['payment_method'], $paymentInfo['subscription']['token'], $payment['token'], $paymentInfo['status'], $this->paymentService);
+                    if($paymentInfo['status'] != 'error'){
+                        $this->paymentService->savePaymentMethod($paymentInfo['payment_method'], $paymentInfo['subscription']['token'], $payment['token'], $paymentInfo['status'], $this->paymentService);
+                    }
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Ошибка при добавлений карты'
+                    ]);
                 }catch (\Exception $exception){
                     return response()->json([
                         'success' => false,
@@ -188,11 +194,20 @@ class UserController extends Controller
         ]);
     }
 
-    public function getUserDebt(){
+    public function getUserDebt(Request $request){
         $user = Auth::user();
 
         if($user->getUserDebts){
-            return UserDebtsResource::collection($user->getUserDebts);
+            $data = $user->getUserDebts;
+            if($request->paymentType){
+                $data = $user->getUserDebts->where('paymentType', $request->paymentType)->get();
+            }
+            if($request->apartment_id){
+                $data = $user->getUserDebts->where('apartment_id', $request->apartment_id)->get();
+            }
+
+
+            return UserDebtsResource::collection($data);
         }
     }
     public function deleteAvatar(){

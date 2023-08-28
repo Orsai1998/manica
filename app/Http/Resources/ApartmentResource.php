@@ -23,6 +23,7 @@ class ApartmentResource extends JsonResource
             'longitude' => $this->longitude,
             'latitude' => $this->latitude,
             'flat_number' => $this->flat,
+            'floor' => $this->floor,
             'price' => $this->prices->price ?? '',
             'is_favourite' => $this->is_favorite(),
             'rate' => $this->feedbacks_avg_rate
