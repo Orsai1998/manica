@@ -2,11 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Billing\PaymentGateway;
 use App\Models\Payment;
 use App\Models\UserPaymentCard;
+use App\Services\Billing\PaymentGateway;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;

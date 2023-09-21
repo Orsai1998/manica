@@ -3,9 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Payment;
-use \App\Billing\PaymentGateway;
+use App\Services\Billing\PaymentGateway;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 
 class UpdatePaymentStatus extends Command
 {

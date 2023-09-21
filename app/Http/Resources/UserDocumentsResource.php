@@ -9,6 +9,7 @@ class UserDocumentsResource  extends JsonResource
     {
         return [
             'id' => $this->id,
+            'isFront' => $this->isFrontSide,
             'path' =>   asset('storage/'.$this->path),
         ];
     }

@@ -128,7 +128,7 @@ class IntegrationController extends Controller
 
 
     public function createUserDebt(Request $request){
-
+        UserDebt::query()->truncate();
         try {
             foreach ($request->all() as $item){
 
@@ -173,14 +173,14 @@ class IntegrationController extends Controller
                 /*****SAVE in DB START*****/
 
                 $user_debt = UserDebt::where('client_id', $item['clientID'])
-                    ->where('apartment_guid', $item['apartmentID'])
-                    ->where('paymentType', $item['paymentType'])
-                    ->where('balance', $item['balance'])->first();
+                    ->where('apartment_id',$apartment->id)
+                    ->where('balance',$item['balance'])
+                    ->where('paymentType',$item['paymentType'])
+                    ->first();
 
                 if(!$user_debt){
                     $user_debt = new UserDebt();
                 }
-
 
                 $user_debt->user_id = $user->id;
                 $user_debt->client_id = $item['clientID'];
@@ -188,6 +188,15 @@ class IntegrationController extends Controller
                 $user_debt->apartment_id = $apartment->id;
                 $user_debt->paymentType = $item['paymentType'];
                 $user_debt->balance = $item['balance'];
+                $user_debt->needToPay = 0;
+
+                if($item['balance'] < 0 && $item['paymentType'] == 'accommodation'){
+                    $user_debt->needToPay = 1;
+                }
+                if($item['balance'] > 0 && $item['paymentType'] == 'depozit'){
+                    $user_debt->needToPay = 1;
+                }
+
                 $user_debt->save();
             }
             return response()->json([

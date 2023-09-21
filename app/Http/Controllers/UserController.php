@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Billing\PaymentGateway;
 use App\Http\Resources\UserDebtsResource;
+use App\Http\Resources\UserPaymentResource;
 use App\Http\Resources\UserResource;
 use App\Jobs\ProcessPaymentsCard;
+use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\User;
+use App\Models\UserDebt;
 use App\Models\UserDocument;
 use App\Models\UserPaymentCard;
+use App\Services\Billing\PaymentGateway;
+use App\Services\IntegrationOneCService;
+use App\Traits\UserExtension;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
@@ -22,10 +27,12 @@ class UserController extends Controller
 {
 
     protected $paymentService;
+    use UserExtension;
 
-    public function __construct(PaymentGateway $paymentService)
+    public function __construct(PaymentGateway $paymentService, IntegrationOneCService $integrationService)
     {
         $this->paymentService = $paymentService;
+        $this->integrationService = $integrationService;
     }
 
 
@@ -79,6 +86,16 @@ class UserController extends Controller
 
         }
 
+        if($request->hasFile('front_ID')){
+            $frontId = $request->file('front_ID');
+            $this->saveUserDocument(1,$frontId,$user);
+
+        }
+        if($request->hasFile('back_ID')){
+            $backId = $request->file('back_ID');
+            $this->saveUserDocument(0,$backId,$user);
+        }
+
         $user->name = $name;
         $user->isFemale = $isFemale;
         $user->birth_date = $birth_date;
@@ -88,6 +105,10 @@ class UserController extends Controller
             'success'=>true,
         ]);
     }
+
+
+
+
 
     public function addUserPaymentCard(Request $request){
         $user = Auth::user();
@@ -131,8 +152,15 @@ class UserController extends Controller
 
                 try {
                     if($paymentInfo['status'] != 'error'){
-                        $this->paymentService->savePaymentMethod($paymentInfo['payment_method'], $paymentInfo['subscription']['token'], $payment['token'], $paymentInfo['status'], $this->paymentService);
+                        $this->paymentService->savePaymentMethod($paymentInfo['payment_method'],
+                            $paymentInfo['subscription']['token'],
+                            $payment['token'], $paymentInfo['status'], $this->paymentService);
+
+                        return response()->json([
+                            'success' => true
+                        ]);
                     }
+
                     return response()->json([
                         'success' => false,
                         'message' => 'Ошибка при добавлений карты'
@@ -143,9 +171,7 @@ class UserController extends Controller
                         'message' => $exception->getMessage()
                     ]);
                 }
-                return response()->json([
-                   'success' => true
-                ]);
+
             }
             return response()->json([
                 'success'=>false,
@@ -199,17 +225,117 @@ class UserController extends Controller
 
         if($user->getUserDebts){
             $data = $user->getUserDebts;
-            if($request->paymentType){
-                $data = $user->getUserDebts->where('paymentType', $request->paymentType)->get();
+
+            if($request->needToPay == "true"){
+                $needToPay = 1;
+            }else{
+                $needToPay = 0;
             }
-            if($request->apartment_id){
-                $data = $user->getUserDebts->where('apartment_id', $request->apartment_id)->get();
+
+            $data = UserDebt::where('user_id', $user->id)
+                ->where('paymentType', $request->paymentType)
+                ->where('needToPay', "=" ,$needToPay)->get();
+
+            if(!$request->paymentType){
+
+                if($needToPay == 1){
+                    $data = UserDebt::where('user_id', $user->id)
+                        ->where('needToPay', "=" ,$needToPay)->get();
+                    return UserDebtsResource::collection($data);
+                }
+                $data = Payment::where('user_id', $user->id)->history()->get();
+
+                return UserPaymentResource::collection($data);
             }
 
 
             return UserDebtsResource::collection($data);
         }
+
+        return "";
     }
+
+    public function payDebt(Request $request){
+
+        $validator = Validator::make($request->all(), [
+            'debt_id' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+
+        $userDebt = UserDebt::find($request->debt_id);
+        if(!$userDebt){
+            return response()->json([
+                'success'=>false,
+                'message'=>'Задолжность не найдена'
+            ]);
+        }
+        $booking = Booking::find($userDebt->userBooking());
+        if(!$userDebt->userBooking() && !$booking){
+            return response()->json([
+                'success'=>false,
+                'message'=>'Не найдена бронь по задолжности'
+            ]);
+        }
+
+        $user = User::find(Auth::user()->id);
+
+        $userPaymentCard = $user->payment_cards->where('is_main','=','1')->first();
+
+        if(!$userPaymentCard){
+            return response()->json([
+                'success'=>false,
+                'message'=>'Добавьте методы оплаты'
+            ]);
+        }
+        DB::beginTransaction();
+
+        try {
+
+            $paymentLocal = $this->paymentService->createLocalPayment($user, $userPaymentCard,
+                $userDebt->userBooking(), abs($userDebt->balance), $userDebt->paymentType);
+
+            if($paymentLocal){
+                $payment =  $this->paymentService->createPayment(abs($userDebt->balance), $paymentLocal->guid,
+                    "Оплата ". $userDebt->paymentType." №".$userDebt->userBooking()." в приложений MANICA.kz",
+                    $userPaymentCard->subscription_token);
+
+                $paymentLocal->setToken($payment['token']);
+                $paymentInfo = $this->paymentService->getPaymentInfo($payment['token']);
+
+                if($paymentInfo['status'] == 'successful'){
+                    $this->changeStatusToPaid($paymentLocal->id);
+                    $this->integrationService->createPayment($booking, $user,$userDebt->paymentType ,
+                        abs($userDebt->balance), $paymentLocal->guid);
+                }
+                if($paymentInfo['status'] == 'error'){
+                    $message = 'Unknown status payment error';
+                    if(count($paymentInfo['error_details']) > 0){
+                        $message = $paymentInfo['error_details']['description'];
+                    }
+                    throw new \Exception($message);
+                }
+                return response()->json(['success'=> true]);
+            }
+            return response()->json(['success'=> false, 'message' => 'Ошибка при созданий платежа']);
+
+        }catch(\Exception $exception){
+            DB::rollBack();
+            return response()->json(['success'=> false, 'message' => $exception->getMessage()]);
+        }
+    }
+
+    protected function changeStatusToPaid($payment_id){
+        $payment = Payment::find($payment_id);
+        $payment ->status = 'PAID';
+        $payment->save();
+    }
+
     public function deleteAvatar(){
         $user = Auth::user();
 

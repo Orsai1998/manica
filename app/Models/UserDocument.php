@@ -12,6 +12,7 @@ class UserDocument extends Model
         'user_id',
         'path',
         'name',
+        'isFrontSide'
     ];
     use HasFactory,SoftDeletes;
 }

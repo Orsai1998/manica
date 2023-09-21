@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Billing;
+namespace App\Services\Billing;
 
 use App\Jobs\ProcessPaymentsCard;
 use App\Models\Payment;
@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use KassaCom\SDK\Exception\ServerResponse\ResponseException;
-use KassaCom\SDK\Exception\TransportException;
+use function config;
 
 class PaymentGateway
 {
@@ -65,6 +64,18 @@ class PaymentGateway
 
             throw new \Exception('Api service error with status: '.$response->status(), $response->status());
         }
+    }
+    public function createLocalPayment(User $user, UserPaymentCard $userPaymentCard, $booking_id, $total_sum, $type){
+        $payment = new Payment();
+        $payment->user_id = $user->id;
+        $payment->booking_id = $booking_id;
+        $payment->user_card_id = $userPaymentCard->id;
+        $payment->total_sum = $total_sum;
+        $payment->payment_token = '';
+        $payment->paymentType = $type;
+        $payment->guid = (string) Str::uuid();
+        $payment->save();
+        return $payment;
     }
 
     public function createPayment($amount, $orderId, $description = "", $subscription_token = "", $payment_reason = "accommodation"){
@@ -150,9 +161,12 @@ class PaymentGateway
         ];
 
         try {
+            Log::info("============REFUND============");
+            info($requestArray);
             $this->createPaymentLogForRefund($user,$external_id, $user_card_id, $amount,$token);
-            return $this->makeRequest('https://api.kassa.com/v1/refund/create', $requestArray);
-
+            $response = $this->makeRequest('https://api.kassa.com/v1/refund/create', $requestArray);
+            Log::info($response);
+            return $response;
         }catch (\Exception $exception){
             Log::channel('interpay-error')->error($exception);
             throw new \Exception($exception->getMessage(). " ".$exception->getCode());

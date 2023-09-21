@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Billing;
+namespace App\Services\Billing;
 
 use App\Models\UserPaymentCard;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use KassaCom\SDK\Exception\ServerResponse\ResponseException;
 use KassaCom\SDK\Exception\TransportException;
+use function config;
 
 class PaymentGatewayWithSDK
 {

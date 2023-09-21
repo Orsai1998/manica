@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function(){
     Route::post('/user/delete', [App\Http\Controllers\Auth\AuthController::class, 'deleteAcc'])->name('deleteAcc');
     Route::post('/user/update', [App\Http\Controllers\UserController::class, 'update'])->name('update');
     Route::post('/user/avatar_delete', [App\Http\Controllers\UserController::class, 'deleteAvatar'])->name('update');
+    Route::post('/user/payDebt', [App\Http\Controllers\UserController::class, 'payDebt'])->name('payDebt');
     Route::post('user/add_card', [App\Http\Controllers\UserController::class, 'addUserPaymentCard']);
     Route::get('user/getUserDebt', [App\Http\Controllers\UserController::class, 'getUserDebt']);
     Route::post('user/set_default_card', [App\Http\Controllers\UserController::class, 'setDefaultCard']);
@@ -73,12 +74,4 @@ Route::group(['prefix'=>'filter'], function(){
     Route::get('/living_conditions',  [App\Http\Controllers\ApartmentController::class, 'getLivingConditions']);
 });
 Route::post('/payment_response',  [App\Http\Controllers\PaymentController::class, 'paymentResponse']);
-Route::middleware('auth.basic')->group(function(){
-    Route::group(['prefix'=>'integration'], function(){
-        Route::post('/create_update_apartment_complex',  [App\Http\Controllers\ApartmentController::class, 'createUpdateApartmentComplex']);
-        Route::post('/create_update_apartment',  [App\Http\Controllers\ApartmentController::class, 'createUpdateApartment']);
-        Route::post('/create_price_list',  [App\Http\Controllers\IntegrationController::class, 'createApartmentPrices']);
-        Route::post('/create_apartment_states',  [App\Http\Controllers\IntegrationController::class, 'createApartmentStates']);
-        Route::post('/create_user_debts',  [App\Http\Controllers\IntegrationController::class, 'createUserDebt']);
-    });
-});
+

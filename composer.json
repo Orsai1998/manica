@@ -13,7 +13,8 @@
         "laravel/framework": "^8.75",
         "laravel/sanctum": "^2.15",
         "laravel/tinker": "^2.5",
-        "mobizon/mobizon-php": "^2.0"
+        "mobizon/mobizon-php": "^2.0",
+      "ext-gd": "*"
     },
     "require-dev": {
         "facade/ignition": "^2.5",
@@ -21,7 +22,8 @@
         "laravel/sail": "^1.0.1",
         "mockery/mockery": "^1.4.4",
         "nunomaduro/collision": "^5.10",
-        "phpunit/phpunit": "^9.5.10"
+        "phpunit/phpunit": "^9.5.10",
+        "plesk/ext-laravel-integration": "*"
     },
     "autoload": {
         "psr-4": {

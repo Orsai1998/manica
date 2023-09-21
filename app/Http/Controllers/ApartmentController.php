@@ -22,6 +22,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+
 use Illuminate\Support\Facades\Validator;
 
 class ApartmentController extends Controller
@@ -45,12 +46,12 @@ class ApartmentController extends Controller
         $apartment_type = $request->input('apartment_type_id') ?? 1;
         $adultAmount = $request->input('adult_amount');
         $childrenAmount = $request->input('children_amount');
-        $rooms = $request->input('rooms');
+        $rooms = collect($request->input('rooms'));
         $sortBy = $request->input('sortBy');
         $sort = $request->input('sort') ?? 'asc';
         $minPrice = (integer)$request->min_price;
         $maxPrice = (integer)$request->max_price;
-        $residential_complex = $request->input('residential_complex_id');
+        $residential_complex = collect($request->input('residential_complex_id'));
 
         if(!$minPrice){
             $minPrice = 1000;
@@ -64,7 +65,7 @@ class ApartmentController extends Controller
         if(!$endDate){
             $endDate = Carbon::now()->addDays(10)->format('Y-m-d');
         }
-        if(!$rooms){
+        if(empty($rooms)){
             $rooms = 0;
         }
         if(!$sortBy){
@@ -88,30 +89,46 @@ class ApartmentController extends Controller
             $sort = 'desc';
         }
 
-        $apartment = Apartment::query()->orDoesntHave('bookings')->orWhereDoesntHave(
+        $apartment = Apartment::query()->WhereDoesntHave(
             'bookings', function ($query) use ($endDate, $startDate) {
             $query->whereBetween('departure_date', [$startDate,$endDate])->where('status', '=', 'PAID')
-                ->orWhere('status', '=', 'PROCESS')->orWhere('status', '=', 'CANCELED');
+                ->orWhere('status', '=', 'PROCESS');
              }
-        )->where('apartment_type_id', $apartment_type)->where('room_number','>=' ,$rooms)
-            ->when($residential_complex, function($query) use ($residential_complex){
-                $query->where('residential_complex_id', $residential_complex);
-            })->withAvg('feedbacks','rate')
-            ->join('apartment_price_intervals' , function ($join) use ($minPrice, $maxPrice, $startDate, $endDate) {
-            $join->on('apartments.id','=','apartment_price_intervals.apartment_id');
-            $join->where('apartment_price_intervals.price','>=', $minPrice);
-            $join->where('apartment_price_intervals.price','<=', $maxPrice);
-            $join->where('apartment_price_intervals.start_date',"<=", $startDate);
-            $join->where('apartment_price_intervals.end_date',">=",$endDate);
-            //$join->whereNotNull('apartment_price_intervals.end_date');
-        })->join('apartment_availability' , function ($join) use ($minPrice, $maxPrice, $startDate, $endDate) {
+        )->where('apartment_type_id', $apartment_type)
+           ->withAvg('feedbacks','rate')
+            ->Join('apartment_price_intervals' , function ($join) use ($minPrice, $maxPrice, $startDate, $endDate) {
+                $join->on('apartments.id','=','apartment_price_intervals.apartment_id');
+                $join->where('apartment_price_intervals.price','>=', $minPrice);
+                $join->where('apartment_price_intervals.price','<=', $maxPrice);
+                $join->whereDate('apartment_price_intervals.start_date','<=', $startDate);
+                $join->whereDate('apartment_price_intervals.end_date','>=', $endDate);
+                //$join->whereNotNull('apartment_price_intervals.end_date');
+        })->Join('apartment_availability' , function ($join) use ($minPrice, $maxPrice, $startDate, $endDate) {
                 $join->on('apartments.id','=','apartment_availability.apartment_id');
                 $join->where('apartment_availability.state','=', 1);
-                $join->where('apartment_availability.start_date',"<=", $startDate);
-                $join->where('apartment_availability.end_date',">=", $endDate);
+                $join->whereDate('apartment_availability.start_date','<=',$startDate);
+                $join->whereDate('apartment_availability.end_date', '>=', $endDate);
                 $join->whereNotNull('apartment_availability.end_date');
-            })
-            ->orderBy($sortBy, $sort)->distinct()->paginate(10);
+            });
+
+        if(count($residential_complex) > 0){
+            $apartment = $apartment->join('residential_complexes' , function ($join) use ($residential_complex, $rooms) {
+                $join->on('apartments.residential_complex_id','=','residential_complexes.id');
+                $join->whereIn('apartments.residential_complex_id',$residential_complex);
+            });
+        }
+
+        if(count($rooms) > 0){
+            $apartment = $apartment->join('apartment_types' , function ($join) use ($rooms) {
+                $join->on('apartments.apartment_type_id','=','apartment_types.id');
+                $join->whereIn('apartments.room_number',$rooms);
+            });
+        }
+
+        $apartment = $apartment->orderBy($sortBy, $sort)->get();
+        $apartments = collect($apartment)->unique()->pluck('id')->toArray();
+        $ids_ordered = implode(',', $apartments);
+        $apartment = Apartment::whereIn('id', $apartments) ->orderByRaw("FIELD(id, $ids_ordered)")->paginate(10);
 
         return ApartmentResource::collection($apartment);
     }
@@ -237,7 +254,7 @@ class ApartmentController extends Controller
                         $apartment->longitude = $item['Longitude'];
                         $apartment->latitude = $item['Latitude'];
                         $apartment->room_number = $item['rooms'];
-                        $apartment->apartment_type_id = 1;
+                        $apartment->apartment_type_id = !$item['Penthouse'] ? 1 : 2;
                         $apartment->save();
                         $apartments[] = $apartment->id;
 

@@ -19,9 +19,14 @@ class Apartment extends Model
     public function residential_complex(){
         return $this->belongsTo(ResidentialComplex::class,'residential_complex_id','id');
     }
+    public function setBooked(){
+        $this->is_available = 0;
+        $this->save();
+    }
 
     public function photos(){
-        $directory = 'storage/apartments/'.$this->GUID;
+        $directory = 'storage/apartments/'.$this->GUID.'/compressed';
+
 
         if (File::exists($directory) && File::isDirectory($directory)) {
             $files = File::files($directory);
@@ -45,7 +50,8 @@ class Apartment extends Model
     }
 
     public function living_conditions(){
-        return $this->belongsToMany(LivingCondition::class,'apartment_living_conditions','apartment_id','living_condition_id');
+        //return $this->belongsToMany(LivingCondition::class,'apartment_living_conditions','apartment_id','living_condition_id');
+        return LivingCondition::all();
     }
 
     public function bookings(){
@@ -65,7 +71,6 @@ class Apartment extends Model
     }
 
     public function favorite(){
-
         return $this->hasMany(FavoriteApartment::class,'apartment_id');
     }
 
@@ -82,7 +87,7 @@ class Apartment extends Model
     }
 
     public function mainPhoto(){
-        $directory = 'storage/apartments/'.$this->GUID;
+        $directory = 'storage/apartments/'.$this->GUID.'/compressed';
 
         if (File::exists($directory) && File::isDirectory($directory)) {
             $files = File::files($directory);

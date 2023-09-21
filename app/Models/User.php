@@ -51,7 +51,7 @@ class User extends Authenticatable
     ];
 
     public function documents(){
-        return $this->hasMany(UserDocument::class, 'user_id');
+        return $this->hasMany(UserDocument::class, 'user_id')->orderBy('updated_at','desc');
     }
 
     public function getDocumentPhoto($type){

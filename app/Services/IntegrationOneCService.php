@@ -110,12 +110,18 @@ class IntegrationOneCService
 
         try {
             $response = $this->makeRequest($url, $requestArray);
-
+            Lon:info($response);
             if(!array_key_exists('success', $response)){
                 throw new \Exception(json_encode($response));
             }
             if(!$response['success']){
+                if($response['clientID']){
+                    
+                }
                 throw new \Exception($this->parseError($response['error']));
+            }
+            if(!$response['GUID'] && empty($response['GUID'])){
+                throw new \Exception('Ошибка 1С не передан GUID');
             }
             $user->one_c_guid =  $response['GUID'];
             $user->save();

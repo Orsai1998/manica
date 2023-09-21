@@ -18,6 +18,17 @@ class Booking extends Model
     public function apartments(){
         return $this->hasOne(Apartment::class,'id','apartment_id');
     }
+    public function setCanceled(){
+        $this->status ='CANCELED';
+        $this->save();
+        $this->setApartmentAvailable();
+
+    }
+
+    public function setApartmentAvailable(){
+        $this->apartments->is_available = 1;
+        $this->apartments->save();
+    }
 
     public function payments(){
         return $this->belongsTo("App\Models\Payment", "booking1121212_id", "id");
@@ -41,8 +52,10 @@ class Booking extends Model
         if($payment){
             $user_card = UserPaymentCard::withTrashed()->where('id', $payment->user_card_id)->first();
 
+            if (!$user_card){
+                throw new \Exception('Не найдена платежная карта');
+            }
             return $user_card->id;
-
         }
         return 0;
     }
@@ -67,8 +80,11 @@ class Booking extends Model
     }
 
     public function status(){
-        if(Carbon::createFromDate($this->departure_date)  >= Carbon::now()){
+        if(Carbon::createFromDate($this->departure_date)  >= Carbon::now() && $this->status != 'CANCELED'){
             return 'Активная';
+        }
+        if($this->status == 'CANCELED'){
+            return 'Отменен';
         }
         return 'Завершено';
     }

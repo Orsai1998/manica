@@ -19,7 +19,7 @@ class AuthController extends Controller
     {
 
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|exists:users,phone_number'
+            'phone_number' => 'required'
         ]);
 
         if ($validator->fails()) {
@@ -53,14 +53,10 @@ class AuthController extends Controller
             $user = User::where('phone_number', $phone_number)->first();
 
             if(!$user){
-                throw new \Exception('User not found');
+                throw new \Exception('Пользователь с таким номером не найден');
             }
             $userOtp = VerificationCode::where('user_id', $user->id)->latest()->first();
             $now = Carbon::now();
-
-            if($userOtp && $now->isBefore($userOtp->expire_at)){
-                return $userOtp;
-            }
 
             return VerificationCode::create([
                 'user_id' => $user->id,
@@ -89,7 +85,8 @@ class AuthController extends Controller
         }
 
 
-        $userOtp = VerificationCode::where('phone_number', $request->phone_number)->where('code', $request->code)->first();
+        $userOtp = VerificationCode::where('phone_number', $request->phone_number)
+            ->where('code', $request->code)->latest()->first();
 
         $now = now();
         if (!$userOtp) {

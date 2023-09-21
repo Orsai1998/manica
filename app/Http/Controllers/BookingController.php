@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Billing\PaymentGateway;
 use App\Http\Resources\BookingDetailResource;
 use App\Http\Resources\UserBookingsResource;
 use App\Jobs\ProcessPayment;
@@ -12,6 +11,7 @@ use App\Models\CompanyInfo;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\UserPaymentCard;
+use App\Services\Billing\PaymentGateway;
 use App\Services\IntegrationOneCService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -118,6 +118,15 @@ class BookingController extends Controller
             $request->merge(['user_id' => $user->id]);
             $booking = Booking::find($request->id);
             $payment = Payment::where('booking_id', $booking->id)->where('status','=' ,'PROCESS')->first();
+            $apartment = Apartment::find($booking->apartment_id);
+
+            if(!$apartment->is_available){
+                return response()->json([
+                    'success'=>false,
+                    'message'=>' Апартамент не доступен в данный период'
+                ]);
+            }
+
             if($payment){
                 return response()->json([
                     'success'=>true,
@@ -139,13 +148,24 @@ class BookingController extends Controller
                     "Оплата брони №".$booking->id." в приложений MANICA.kz",
                     $userPaymentCard->subscription_token);
 
+                if(!$paymentService['token']){
+                    throw new \Exception('Не присвоен токен платежа по проживанию');
+                }
 
                 $paymentAccomidation->setToken($paymentService['token']);
                 $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
 
                 if($paymentInfo['status'] == 'successful'){
                     $this->changeStatusToPaid($booking->id,$paymentAccomidation->id);
-                }else{
+                }
+                if($paymentInfo['status'] == 'error'){
+                    $message = 'Unknown status payment error';
+                    if(count($paymentInfo['error_details']) > 0){
+                        $message = $paymentInfo['error_details']['description'];
+                    }
+                    throw new \Exception($message);
+                }
+                else{
                     Log::info('Статус оплаты брони №'. $booking->id. ' '. $paymentInfo['status']);
                     $this->changeStatusToUnknown($booking->id, $paymentAccomidation->id, $paymentInfo['status']);
                     ProcessPayment::dispatch($this->paymentService, $paymentAccomidation);
@@ -155,10 +175,13 @@ class BookingController extends Controller
                     "Оплата депозита брони №".$booking->id." в приложений MANICA.kz",
                     $userPaymentCard->subscription_token);
 
-
+                if(!$paymentService['token']){
+                    throw new \Exception('Не присвоен токен платежа по проживанию');
+                }
                 $paymentDepozit->setToken($paymentService['token']);
                 $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
             }catch (\Exception $exception){
+                DB::rollback();
                 return response()->json([
                     'success'=>false,
                     'message'=>$exception->getMessage()
@@ -177,6 +200,7 @@ class BookingController extends Controller
             $this->integrationService->createBooking($booking, $user);
             $this->integrationService->createPayment($booking, $user,"depozit" ,$request->deposit, $paymentDepozit->guid);
             $this->integrationService->createPayment($booking, $user,"accommodation" ,$request->total_sum, $paymentAccomidation->guid);
+            $apartment->setBooked();
 
             DB::commit();
             return response()->json(['success'=> true]);
@@ -215,23 +239,46 @@ class BookingController extends Controller
                    'message'=>'Ваша бронь не найдена',
                ]);
            }
-            $payment = Payment::where('booking_id', $booking->id)->first();
-            if($payment){
-                if(!empty($payment->payment_token)){
-                    $this->paymentService->refundPayment($payment->payment_token,$booking->id, $booking->getPaymentMethodId(),$payment->total_sum, 'Отмена брони №'. $booking->id);
+            $payment = Payment::where('booking_id', $booking->id)
+                ->where('paymentType', '=','accommodation')->paid()->first();
+
+            $deposit = Payment::where('booking_id', $booking->id)
+                ->where('paymentType', '=','depozit')->paid()->first();
+
+            if($payment && $deposit){
+                if(!empty($payment->payment_token) && !empty($deposit->payment_token)){
+                    try {
+                        $this->paymentService->refundPayment($payment->payment_token,$booking->id,
+                            $booking->getPaymentMethodId(),
+                            $payment->total_sum, 'Отмена брони №'. $booking->id);
+
+                        $this->paymentService->refundPayment($deposit->payment_token,$booking->id,
+                            $booking->getPaymentMethodId(),
+                            $deposit->total_sum, 'Отмена депозита №'. $booking->id);
+
+                    }catch (\Exception $exception){
+                        throw new \Exception($exception->getMessage());
+                    }
                 }
+
+                $payment->setCanceled();
+                $deposit->setCanceled();
+                $booking->setCanceled();
+
+                $this->integrationService->cancelBooking($booking);
+
+                DB::commit();
+                return response()->json([
+                    'success'=>true,
+                ]);
             }
 
-            $booking->status = 'CANCELED';
-            $payment->status = 'CANCELED';
-            $payment->save();
-            $booking->save();
-            DB::commit();
-            $this->integrationService->cancelBooking($booking);
-
             return response()->json([
-                'success'=>true,
+                'success'=>false,
+                'message' => 'Не найден депозит или платеж за проживание'
             ]);
+
+
         }catch (\Exception $exception){
             DB::rollback();
             Log::error($exception);
@@ -243,6 +290,8 @@ class BookingController extends Controller
 
     }
 
+
+
     protected function createPayment(User $user, UserPaymentCard $userPaymentCard, $booking_id, $total_sum, $type){
         $payment = new Payment();
         $payment->user_id = $user->id;
@@ -253,7 +302,6 @@ class BookingController extends Controller
         $payment->paymentType = $type;
         $payment->guid = (string) Str::uuid();
         $payment->save();
-
         return $payment;
     }
 
@@ -262,13 +310,15 @@ class BookingController extends Controller
         $active = $request->active;
 
         $user = Auth::user();
-        $now = Carbon::now()->format('Y-m-d');
+        $now = Carbon::now()->timezone('Asia/Dhaka')->format('Y-m-d');
         if($active == 1){
             $booking = Booking::where('user_id', $user->id)
-                ->whereDate('departure_date','>=',$now)->where('status','!=', 'CANCELED')->get();
+                ->whereDate('departure_date','>',$now)->where('status','!=', 'CANCELED')
+                ->where('status','!=', 'error')->get();
         } else{
             $booking = Booking::where('user_id', $user->id)
-                ->whereDate('departure_date','<',$now)->where('status','!=', 'CANCELED')->get();
+                ->whereDate('departure_date','<=',$now)->where('status','!=', 'CANCELED')
+                ->where('status','!=', 'error')->get();
         }
 
         return UserBookingsResource::collection($booking);
@@ -347,7 +397,15 @@ class BookingController extends Controller
             if($paymentInfo['status'] == 'successful'){
                 $this->changeStatusToPaid($booking->id, $payment->id);
                 $this->integrationService->changeBooking($booking, $user);
-            }else{
+            }
+            if($paymentInfo['status'] == 'error'){
+                $message = 'Unknown status payment error';
+                if(count($paymentInfo['error_details']) > 0){
+                    $message = $paymentInfo['error_details']['description'];
+                }
+                throw new \Exception($message);
+            }
+            else{
                 Log::info('Статус оплаты брони №'. $booking->id. ' '. $paymentInfo['status']);
                 $message = 'Статус оплаты брони №'. $booking->id. ' '. $paymentInfo['status'];
                 $this->changeStatusToUnknown($booking->id, $payment->id, $paymentInfo['status']);

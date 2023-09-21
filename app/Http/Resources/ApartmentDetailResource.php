@@ -23,7 +23,7 @@ class ApartmentDetailResource extends JsonResource
             'room_number' => $this->room_number,
             'flat_number' => $this->flat,
             'floor' => $this->floor,
-            'depozit' => 20000,
+            'deposit' => 20000,
             'block' => $this->block,
             'entrance' => $this->entrance,
             'price' => $this->prices->price,
@@ -33,7 +33,7 @@ class ApartmentDetailResource extends JsonResource
             'rate' => $this->rate(),
             'feedbackCount' => $this->feedbacks->count(),
             'description' => $this->description,
-            'living_conditions' => LivingConditionResource::collection($this->living_conditions),
+            'living_conditions' => LivingConditionResource::collection($this->living_conditions()),
             'feedbacks' => ApartmentFeedbackResource::collection($this->feedbacks),
         ];
     }

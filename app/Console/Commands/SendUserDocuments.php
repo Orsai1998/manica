@@ -2,12 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Payment;
-use \App\Billing\PaymentGateway;
 use App\Models\User;
 use App\Services\IntegrationOneCService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 
 class SendUserDocuments extends Command
 {

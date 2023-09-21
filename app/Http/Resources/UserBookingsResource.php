@@ -21,6 +21,7 @@ class UserBookingsResource extends JsonResource
             'residential_complex_name' => $this->apartments->residential_complex->name,
             'entry_date' => $this->entry_date,
             'departure_date' => $this->departure_date,
+
         ];
     }
 }
