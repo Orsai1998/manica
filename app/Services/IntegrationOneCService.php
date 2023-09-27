@@ -61,35 +61,37 @@ class IntegrationOneCService
     public function sendUserDocuments(User $user){
 
         $url = $this->url.'/send_client_document';
-        if($user->getDocumentPhoto('front') && $user->getDocumentPhoto('back')){
-            $requestArray = [
-                "clientId" => $user->guid,
-                "front_ID" => [
-                    "name" => $user->getDocumentPhoto('front')->name,
-                    "url" => asset('storage/'.$user->getDocumentPhoto('front')->path),
-                ],
-                "back_ID" => [
-                    "name" => $user->getDocumentPhoto('back')->name,
-                    "url" => asset('storage/'.$user->getDocumentPhoto('back')->path),
-                ]
-            ];
+        $requestArray = [
+            "clientId" => $user->guid,
+            "front_ID" => [
+                "name" => $user->getDocumentPhoto(1)->path,
+                "url" => asset('storage/'.$user->getDocumentPhoto(1)->path),
+            ],
+            "back_ID" => [
+                "name" => $user->getDocumentPhoto(0)->path,
+                "url" => asset('storage/'.$user->getDocumentPhoto(0)->path),
+            ]
+        ];
 
-            try {
-                $response = $this->makeRequest($url, $requestArray);
-
-               echo print_r($response);
-                if(!array_key_exists('success', $response)){
-                    throw new \Exception(json_encode($response));
-                }
-                if(!$response['success']){
-                    throw new \Exception($this->parseError($response['error']));
-                }
-
-
-            }catch (\Exception $exception){
-                Log::error($exception);
-                throw new \Exception($exception->getMessage());
+        try {
+            $response = $this->makeRequest($url, $requestArray);
+            Log::info("================DOCUMENTS=====================");
+            Log::info($requestArray);
+            Log::info($response);
+            echo print_r($response);
+            if(!array_key_exists('success', $response)){
+                throw new \Exception(json_encode($response));
             }
+            if(!$response['success']){
+                throw new \Exception($this->parseError($response['error']));
+            }
+
+            $user->getDocumentPhoto(1)->setSentStatus();
+            $user->getDocumentPhoto(0)->setSentStatus();
+
+
+        }catch (\Exception $exception){
+            Log::error($exception);
         }
 
     }
@@ -116,7 +118,7 @@ class IntegrationOneCService
             }
             if(!$response['success']){
                 if($response['clientID']){
-                    
+
                 }
                 throw new \Exception($this->parseError($response['error']));
             }
@@ -125,7 +127,7 @@ class IntegrationOneCService
             }
             $user->one_c_guid =  $response['GUID'];
             $user->save();
-
+            //$this->sendUserDocuments($user);
 
 
         }catch (\Exception $exception){

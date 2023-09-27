@@ -54,8 +54,8 @@ class User extends Authenticatable
         return $this->hasMany(UserDocument::class, 'user_id')->orderBy('updated_at','desc');
     }
 
-    public function getDocumentPhoto($type){
-        return $this->documents()->where('name','like', '%'.$type.'%')->first();
+    public function getDocumentPhoto($isFront){
+        return $this->documents()->where('isFrontSide', $isFront)->first();
     }
 
     public function payment_cards(){

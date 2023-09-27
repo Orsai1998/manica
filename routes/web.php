@@ -16,7 +16,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
-
+Route::get('/register', [App\Http\Controllers\ApartmentController::class, 'register']);
+Route::post('/do_register', [App\Http\Controllers\ApartmentController::class, 'do_register']);
+Route::get('/login', []);
 Route::middleware('auth.basic')->group(function(){
     Route::group(['prefix'=>'api'], function(){
         Route::group(['prefix'=>'integration'], function() {

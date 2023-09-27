@@ -34,16 +34,22 @@ class Payment extends Model
         $this->save();
     }
 
+    public function bookings(){
+        return $this->belongsTo(Booking::class,'booking_id','id');
+    }
     public function scopePaid(Builder $query){
         return $query->where('status','=','PAID')->orWhere('status','=','successful');
     }
 
+    public function scopeExpired(){
+        $this->bookings()->whereDate('departure_date','<' ,now());
+    }
+
     public function scopeHistory(Builder $query){
-        return $query->where('status','=','PAID')
-            ->where('paymentType','=','accommodation')
-            ->where('paymentType','=','depozit')
-            ->where('paymentType','=','refund')
-            ->orWhere('status','=','successful');
+        return $query->whereIn('status',['PAID', 'successful'])
+            ->where('paymentType','=', 'accommodation')
+            ->where('paymentType','!=', 'ADD_CARD');
+
     }
 
     public function payment_method(){

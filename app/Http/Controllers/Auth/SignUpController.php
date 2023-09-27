@@ -94,7 +94,7 @@ class SignUpController extends Controller
         }
 
         $user = VerificationCode::where('phone_number', $request->phone_number)
-            ->where('code', $request->code)->latest()
+            ->where('code', $request->code)
             ->first();
         $now = now();
         if (!$now->isBefore($user->expire_at)) {
@@ -192,7 +192,7 @@ class SignUpController extends Controller
 
             if(empty($user->one_c_guid)){
                 $this->integrationService->createUpdateUser($client);
-                SendUserDocuments::dispatch($user, $this->integrationService);
+                //SendUserDocuments::dispatch($user, $this->integrationService);
             }
 
 

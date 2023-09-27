@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\UserPaymentCard;
 use App\Services\Billing\PaymentGateway;
 use App\Services\IntegrationOneCService;
+use App\Traits\BookingTrait;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -24,7 +25,7 @@ use Illuminate\Support\Str;
 
 class BookingController extends Controller
 {
-
+    use BookingTrait;
     protected $paymentService;
     protected $integrationService;
     protected $deposit_sum = 20000;
@@ -92,6 +93,11 @@ class BookingController extends Controller
         if($request->deposit == 0){
             $request->deposit = $this->deposit_sum;
         }
+        $request->departure_date = Carbon::create($request->departure_date)->addHours(12);
+
+        if($request->is_late_departure){
+            $request->departure_date = Carbon::create($request->departure_date)->addHours(18);
+        }
 
         if($request->is_business_trip_reservation){
             $company =  CompanyInfo::where('user_id', $user->id)->first();
@@ -134,7 +140,7 @@ class BookingController extends Controller
                 ]);
             }
             $user = User::find($user->id);
-
+            $request->departure_date =
             $booking->update($request->all());
 
             $paymentDepozit = $this->createPayment($user, $userPaymentCard, $booking->id, $request->deposit, "depozit");
@@ -244,13 +250,13 @@ class BookingController extends Controller
 
             $deposit = Payment::where('booking_id', $booking->id)
                 ->where('paymentType', '=','depozit')->paid()->first();
-
+            $total_sum = $this->calculateBookingSumForCancel($booking);
             if($payment && $deposit){
                 if(!empty($payment->payment_token) && !empty($deposit->payment_token)){
                     try {
                         $this->paymentService->refundPayment($payment->payment_token,$booking->id,
                             $booking->getPaymentMethodId(),
-                            $payment->total_sum, 'Отмена брони №'. $booking->id);
+                            $total_sum, 'Отмена брони №'. $booking->id);
 
                         $this->paymentService->refundPayment($deposit->payment_token,$booking->id,
                             $booking->getPaymentMethodId(),
@@ -367,6 +373,12 @@ class BookingController extends Controller
             ]);
         }
 
+        $request->new_departure_datetime = Carbon::create($request->new_departure_datetime)->addHours(12);
+
+        if($request->is_late_departure){
+            $request->new_departure_datetime = Carbon::create($request->new_departure_datetime)->addHours(18);
+        }
+
         $user = Auth::user();
         $booking = Booking::find($request->booking_id);
         $payment = Payment::where('booking_id', $booking->id)->where('status','=' ,'PROCESS')->first();
@@ -392,7 +404,12 @@ class BookingController extends Controller
 
             $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
             $booking->departure_date = $request->new_departure_datetime;
+
+            if($request->is_late_departure){
+                $booking->is_late_departure = $request->is_late_departure;
+            }
             $booking->save();
+
             $message = "";
             if($paymentInfo['status'] == 'successful'){
                 $this->changeStatusToPaid($booking->id, $payment->id);

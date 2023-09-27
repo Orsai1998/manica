@@ -27,6 +27,16 @@ use Illuminate\Support\Facades\Validator;
 
 class ApartmentController extends Controller
 {
+    public function register(){
+        return view('register');
+    }
+    public function do_register(Request $request){
+           $email = $request->email;
+           $password = $request->password;
+
+
+    }
+
     public function getApartmentTypes() : JsonResource {
         return ApartmentTypeResource::collection(ApartmentType::all());
     }
@@ -43,6 +53,7 @@ class ApartmentController extends Controller
 
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
+        $forMap = $request->boolean('is_for_map');
         $apartment_type = $request->input('apartment_type_id') ?? 1;
         $adultAmount = $request->input('adult_amount');
         $childrenAmount = $request->input('children_amount');
@@ -128,8 +139,11 @@ class ApartmentController extends Controller
         $apartment = $apartment->orderBy($sortBy, $sort)->get();
         $apartments = collect($apartment)->unique()->pluck('id')->toArray();
         $ids_ordered = implode(',', $apartments);
-        $apartment = Apartment::whereIn('id', $apartments) ->orderByRaw("FIELD(id, $ids_ordered)")->paginate(10);
 
+        $apartment = Apartment::whereIn('id', $apartments)->withAvg('feedbacks','rate') ->orderByRaw("FIELD(id, $ids_ordered)")->paginate(10);
+        if($forMap){
+            $apartment = Apartment::whereIn('id', $apartments)->withAvg('feedbacks','rate') ->orderByRaw("FIELD(id, $ids_ordered)")->get();
+        }
         return ApartmentResource::collection($apartment);
     }
 

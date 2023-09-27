@@ -12,7 +12,13 @@ class UserDocument extends Model
         'user_id',
         'path',
         'name',
-        'isFrontSide'
+        'isFrontSide',
+        'isSentTo1C'
     ];
     use HasFactory,SoftDeletes;
+
+    public function setSentStatus(){
+        $this->isSentTo1C = 1;
+        $this->save();
+    }
 }

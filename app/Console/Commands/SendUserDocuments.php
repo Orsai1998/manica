@@ -40,11 +40,15 @@ class SendUserDocuments extends Command
      */
     public function handle()
     {
-        $users= User::all();
+        $users= User::whereHas('documents', function ($q){
+            $q->whereNotNull('name');
+            $q->whereNull('isSentTo1C');
+        })->get();
 
         foreach ($users as $user){
             if(!empty($user->documents)){
                $this->integrationOneCService->sendUserDocuments($user);
+               echo "Фото документа отправлено ". $user->one_c_guid. "\n";
             }else{
                 echo 'Нет документов клиента '.$user->id;
             }

@@ -222,37 +222,23 @@ class UserController extends Controller
 
     public function getUserDebt(Request $request){
         $user = Auth::user();
-
+        $needToPay = $request->boolean('needToPay');
         if($user->getUserDebts){
-            $data = $user->getUserDebts;
-
-            if($request->needToPay == "true"){
-                $needToPay = 1;
-            }else{
-                $needToPay = 0;
+            if($needToPay){
+                $data = Payment::whereHas('bookings',function ($query){
+                    $query->where('departure_date','<', now());
+                })->where('user_id', $user->id)->history()->orderBy('booking_id','desc')->get();
+                return UserPaymentResource::collection($data);
             }
 
             $data = UserDebt::where('user_id', $user->id)
                 ->where('paymentType', $request->paymentType)
                 ->where('needToPay', "=" ,$needToPay)->get();
 
-            if(!$request->paymentType){
-
-                if($needToPay == 1){
-                    $data = UserDebt::where('user_id', $user->id)
-                        ->where('needToPay', "=" ,$needToPay)->get();
-                    return UserDebtsResource::collection($data);
-                }
-                $data = Payment::where('user_id', $user->id)->history()->get();
-
-                return UserPaymentResource::collection($data);
-            }
-
-
             return UserDebtsResource::collection($data);
         }
 
-        return "";
+        return [];
     }
 
     public function payDebt(Request $request){

@@ -86,7 +86,7 @@ class AuthController extends Controller
 
 
         $userOtp = VerificationCode::where('phone_number', $request->phone_number)
-            ->where('code', $request->code)->latest()->first();
+            ->where('code', $request->code)->first();
 
         $now = now();
         if (!$userOtp) {
