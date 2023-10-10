@@ -2,9 +2,11 @@
 
 namespace App\Traits;
 
+use App\Models\ApartmentPrice;
 use App\Models\Booking;
 use App\Models\UserDocument;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 trait BookingTrait
@@ -27,6 +29,82 @@ trait BookingTrait
             return $booking->total_sum - $dayly_amount;
         }
 
+    }
+
+    public function payment_details($apartment_id, $start_date, $end_date, $is_late_departure = false){
+        $payment_details = [];
+        $end_date = Carbon::createFromDate($end_date)->subDay();
+        $apartment_price = ApartmentPrice::select('price', DB::raw('count(*) as total'))
+            ->where('apartment_id', $apartment_id)->
+            whereBetween('date',[$start_date, $end_date])
+            ->groupBy('price')
+            ->pluck('total','price')
+            ->toArray();
+        $price = 0;
+        $name = "";
+
+        $apartment_price_for_late = 0;
+
+        if($is_late_departure){
+            $apartment_price_for_late = ApartmentPrice::where('apartment_id', $apartment_id)
+                ->whereDate('date',$end_date)->first();
+            $apartment_price_for_late = $apartment_price_for_late->price / 2;
+            $name .= "За поздний выезд " . $apartment_price_for_late . "; ";
+        }
+
+        foreach ($apartment_price as $key => $item){
+            $name .= $item. " x ". $key."; ";
+            $price += $item * $key;
+        }
+        $price = $price + $apartment_price_for_late;
+        $deposit = config('services.deposit');
+
+        $payment_details[] = [
+            'name' => $name,
+            'price' => $price,
+            'type' => 'accommodation',
+
+        ];
+
+        $payment_details[] = [
+            'name' => 'Депозит',
+            'price' => $deposit,
+            'type' => 'deposit',
+        ];
+
+        $payment_details[] = [
+            'name' => 'Итоговая сумма ',
+            'price' => $deposit + $price,
+            'type' => 'total_sum',
+        ];
+
+        return $payment_details;
+    }
+
+    public function calculateForRenewal($new_departure_date, $is_late_departure){
+        $apartment_price = ApartmentPrice::select('price', DB::raw('count(*) as total'))
+            ->where('apartment_id', $this->apartment_id)->
+            where('date','>',$this->departure_date)->
+            where('date','<=',$new_departure_date)
+            ->groupBy('price')
+            ->pluck('total','price')
+            ->toArray();
+
+        $price = 0;
+        $name = "";
+        $apartment_price_for_late = 0;
+        if($is_late_departure){
+            $apartment_price_for_late = ApartmentPrice::where('apartment_id', $this->apartment_id)
+                ->whereDate('date',$new_departure_date)->first();
+            $apartment_price_for_late = $apartment_price_for_late->price / 2;
+            $name .= "За поздний выезд " . $apartment_price_for_late . "; ";
+        }
+
+        foreach ($apartment_price as $key => $item){
+            $name .= $item. " x ". $key."; ";
+            $price += $item * $key;
+        }
+        return $price + $apartment_price_for_late;
     }
 
 

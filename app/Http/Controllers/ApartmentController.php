@@ -65,7 +65,7 @@ class ApartmentController extends Controller
         $residential_complex = collect($request->input('residential_complex_id'));
 
         if(!$minPrice){
-            $minPrice = 1000;
+            $minPrice = 0;
         }
         if(!$maxPrice){
             $maxPrice = 1000000;
@@ -82,10 +82,10 @@ class ApartmentController extends Controller
         if(!$sortBy){
             $minPrice = 1000;
             $maxPrice = 1000000;
-            $sortBy = 'apartment_price_intervals.price';
+            $sortBy = 'apartment_prices.price';
         }
         if($sortBy == 'price'){
-            $sortBy = 'apartment_price_intervals.price';
+            $sortBy = 'apartment_prices.price';
         }
 
         if($sortBy == 'newest'){
@@ -107,12 +107,10 @@ class ApartmentController extends Controller
              }
         )->where('apartment_type_id', $apartment_type)
            ->withAvg('feedbacks','rate')
-            ->Join('apartment_price_intervals' , function ($join) use ($minPrice, $maxPrice, $startDate, $endDate) {
-                $join->on('apartments.id','=','apartment_price_intervals.apartment_id');
-                $join->where('apartment_price_intervals.price','>=', $minPrice);
-                $join->where('apartment_price_intervals.price','<=', $maxPrice);
-                $join->whereDate('apartment_price_intervals.start_date','<=', $startDate);
-                $join->whereDate('apartment_price_intervals.end_date','>=', $endDate);
+            ->Join('apartment_prices' , function ($join) use ($minPrice, $maxPrice, $startDate, $endDate) {
+                $join->on('apartments.id','=','apartment_prices.apartment_id');
+                $join->whereBetween('apartment_prices.price',[$minPrice, $maxPrice]);
+                $join->whereBetween('apartment_prices.date',[$startDate,$endDate]);
                 //$join->whereNotNull('apartment_price_intervals.end_date');
         })->Join('apartment_availability' , function ($join) use ($minPrice, $maxPrice, $startDate, $endDate) {
                 $join->on('apartments.id','=','apartment_availability.apartment_id');
@@ -142,7 +140,7 @@ class ApartmentController extends Controller
 
         $apartment = Apartment::whereIn('id', $apartments)->withAvg('feedbacks','rate') ->orderByRaw("FIELD(id, $ids_ordered)")->paginate(10);
         if($forMap){
-            $apartment = Apartment::whereIn('id', $apartments)->withAvg('feedbacks','rate') ->orderByRaw("FIELD(id, $ids_ordered)")->get();
+            $apartment = Apartment::whereIn('id', $apartments)->withAvg('feedbacks','rate')->get();
         }
         return ApartmentResource::collection($apartment);
     }

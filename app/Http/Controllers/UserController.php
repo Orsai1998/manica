@@ -112,58 +112,20 @@ class UserController extends Controller
 
     public function addUserPaymentCard(Request $request){
         $user = Auth::user();
-
-        $validator = Validator::make($request->all(), [
-            'type' => 'required',
-            'card_number' => 'required',
-            'card_year' => 'required',
-            'card_month' => 'required',
-            'card_security' => 'required',
-            'cardholder' => 'required',
-        ]);
         $amount = 10;
-        if ($validator->fails()) {
-            return response()->json([
-                'success'=>false,
-                'message'=>$validator->errors()
-            ]);
-        }
 
         try {
             $user = User::find($user->id);
             $paymentLocal = $this->createPayment($user);
             $payment =  $this->paymentService->createPayment($amount, $paymentLocal->guid,"","","add_card");
             $paymentLocal->setToken($payment['token']);
-            $token = $payment['token'];
-            $ip = $payment['ip'];
-
-            $paymentMethod = [
-                'card_number' => $request->card_number,
-                'type' => 'card',
-                'card_year' => $request->card_year,
-                'card_month' => $request->card_month,
-                'card_security' => $request->card_security,
-                'cardholder' => $request->cardholder
-            ];
-            $payment =  $this->paymentService->proceedPayment($token, $ip, $paymentMethod);
 
             if($payment){
-                 $paymentInfo = $this->paymentService->getPaymentInfo($token);
-
                 try {
-                    if($paymentInfo['status'] != 'error'){
-                        $this->paymentService->savePaymentMethod($paymentInfo['payment_method'],
-                            $paymentInfo['subscription']['token'],
-                            $payment['token'], $paymentInfo['status'], $this->paymentService);
-
-                        return response()->json([
-                            'success' => true
-                        ]);
-                    }
 
                     return response()->json([
-                        'success' => false,
-                        'message' => 'Ошибка при добавлений карты'
+                        'success' => true,
+                        'payment_url' => $payment['payment_url']
                     ]);
                 }catch (\Exception $exception){
                     return response()->json([
@@ -224,18 +186,25 @@ class UserController extends Controller
         $user = Auth::user();
         $needToPay = $request->boolean('needToPay');
         if($user->getUserDebts){
-            if($needToPay){
-                $data = Payment::whereHas('bookings',function ($query){
-                    $query->where('departure_date','<', now());
-                })->where('user_id', $user->id)->history()->orderBy('booking_id','desc')->get();
-                return UserPaymentResource::collection($data);
+
+            if($request->paymentType == "depozit"){
+                $data = UserDebt::where('user_id', $user->id)
+                    ->where('paymentType', $request->paymentType)
+                    ->where('needToPay', "=" ,$needToPay)->get();
+                return UserDebtsResource::collection($data);
             }
-
-            $data = UserDebt::where('user_id', $user->id)
-                ->where('paymentType', $request->paymentType)
-                ->where('needToPay', "=" ,$needToPay)->get();
-
-            return UserDebtsResource::collection($data);
+            if(!$request->has('paymentType')){
+                if(!$needToPay){
+                    $data = Payment::whereHas('bookings',function ($query){
+                        $query->where('departure_date','<', now());
+                    })->where('user_id', $user->id)->history()->orderBy('booking_id','desc')->get();
+                    return UserPaymentResource::collection($data);
+                }
+                $data = UserDebt::where('user_id', $user->id)
+                    ->where('paymentType', '=', 'accommodation')
+                    ->where('needToPay', "=" ,$needToPay)->get();
+                return UserDebtsResource::collection($data);
+            }
         }
 
         return [];

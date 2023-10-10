@@ -18,7 +18,7 @@ class BookingDetailResource extends JsonResource
     {
         return [
             'booking_id' => $this->id,
-            'status' => $this->status(),
+            'status' => $this->status() ?? "",
             'apartment' => new ApartmentDetailResource($this->apartments),
             'number_of_adult' => $this->number_of_adult,
             'number_of_children' => $this->number_of_children,
@@ -27,8 +27,11 @@ class BookingDetailResource extends JsonResource
             'departure_date' => $this->departure_date,
             'days' => $this->numberOfDays(),
             'is_late_departure' => $this->is_late_departure,
+            'number_of_nights' => $this->numberOfNights(),
             'total_sum' => $this->total_sum,
+            'deposit' => $this->deposit,
             'payment_method' => $this->getPaymentMethod(),
+            'payment_details' => $this->payment_details($this->apartment_id, $this->entry_date, $this->departure_date,$this->is_late_departure ),
             'key-lock' => $this->getKeyLock()
         ];
     }

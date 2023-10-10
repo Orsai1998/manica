@@ -36,10 +36,11 @@ return [
         'create_payment_url' => env('INTERPAY_CREATE_PAYMENT_URL', '18D33336-6D5A-4F00-804B-170FB11FE160'),
         'process_payment_url' => env('INTERPAY_PROCESS_PAYMENT_URL', '18D33336-6D5A-4F00-804B-170FB11FE160'),
     ],
+    'deposit' => '1',
     'one_c' => [
-        'url' => env('one_c_url', 'http://rhouse.keenetic.pro:7071/test/hs/mobiApi'),
+        'url' => env('one_c_url', 'http://rhouse.keenetic.pro:7071/all_bases/hs/mobiApi'),
         'username' => env('one_c_username', 'mobiApi'),
-        'password' => env('one_c_password', 'Qwerty123'),
+        'password' => env('one_c_password', 'dHvSHX'),
     ],
 
     'mobizone' => [

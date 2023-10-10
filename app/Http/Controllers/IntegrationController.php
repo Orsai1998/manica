@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\Validator;
 class IntegrationController extends Controller
 {
     public function createApartmentPrices(Request $request){
-
+        info("=======PRICES==========");
+        info($request->all());
 
         $validator = Validator::make($request->all(), [
             '*.GUID' => 'required',
@@ -42,14 +43,17 @@ class IntegrationController extends Controller
 
                         foreach($item['priceList'] as $price){
 //                            $datePrice = Carbon::createFromDate($price['period'])->format('Y-m-d');
-//                            $apartmentPrice = ApartmentPrice::where('apartment_id',  $apartment->id)
-//                                ->whereDate('date', $datePrice)->get();
-                            ApartmentPrice::create([
-                                'apartment_id' => $apartment->id,
-                                'price' => $price['price'],
-                                'state' => 1,
-                                'date' => $price['period'],
-                            ]);
+                            $apartmentPrice = ApartmentPrice::where('apartment_id',  $apartment->id)
+                                ->whereDate('date', $price['period'])->first();
+                            if(!$apartmentPrice){
+                                $apartmentPrice = new ApartmentPrice();
+                            }
+                            $apartmentPrice->apartment_id =  $apartment->id;
+                            $apartmentPrice->price =  $price['price'];
+                            $apartmentPrice->state =  1;
+                            $apartmentPrice->date =  $price['period'];
+                            $apartmentPrice->save();
+
                         }
                     }else{
                         Log::error('Apartment with GUID '.$item['GUID']. ' was with empty price list');

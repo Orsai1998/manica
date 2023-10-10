@@ -28,11 +28,12 @@ class BookingController extends Controller
     use BookingTrait;
     protected $paymentService;
     protected $integrationService;
-    protected $deposit_sum = 20000;
+    protected $deposit_sum;
     public function __construct(PaymentGateway $paymentService, IntegrationOneCService $integrationService)
     {
         $this->paymentService = $paymentService;
         $this->integrationService = $integrationService;
+        $this->deposit_sum = config('services.deposit');
     }
 
 
@@ -42,6 +43,8 @@ class BookingController extends Controller
 
         $validator = Validator::make($request->all(), [
             'apartment_id' => 'required | exists:apartments,id',
+            'entry_date' => 'required',
+            'departure_date' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -59,12 +62,13 @@ class BookingController extends Controller
         }
 
         $request->merge(['user_id' => $user->id]);
+        $request->merge(['status' => 'PENDING']);
         $booking = Booking::create($request->all());
-
+        $booking->calculateTotalSum();
         return response()->json([
-            'success'=> true,
-            'booking_id'=> $booking->id
-        ]);
+            'success'=>true,
+            'data'=> new BookingDetailResource($booking)
+        ],200);
     }
 
     public function pay(Request $request){
@@ -79,8 +83,6 @@ class BookingController extends Controller
             'number_of_children' => 'required',
             'entry_date' => 'required',
             'departure_date' => 'required',
-            'total_sum' => 'required',
-            'deposit' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -93,10 +95,14 @@ class BookingController extends Controller
         if($request->deposit == 0){
             $request->deposit = $this->deposit_sum;
         }
-        $request->departure_date = Carbon::create($request->departure_date)->addHours(12);
+        $request->entry_date = Carbon::create($request->entry_date);
+        $request->entry_date->hour = 12;
+        $request->departure_date = Carbon::create($request->departure_date);
+        $request->departure_date->hour = 12;
 
         if($request->is_late_departure){
-            $request->departure_date = Carbon::create($request->departure_date)->addHours(18);
+            $request->departure_date = Carbon::create($request->departure_date);
+            $request->departure_date->hour = 18;
         }
 
         if($request->is_business_trip_reservation){
@@ -140,17 +146,16 @@ class BookingController extends Controller
                 ]);
             }
             $user = User::find($user->id);
-            $request->departure_date =
             $booking->update($request->all());
 
-            $paymentDepozit = $this->createPayment($user, $userPaymentCard, $booking->id, $request->deposit, "depozit");
-            $paymentAccomidation = $this->createPayment($user, $userPaymentCard, $booking->id, $request->total_sum, "accommodation");
+            $paymentDepozit = $this->createPayment($user, $userPaymentCard, $booking->id, $booking->deposit, "depozit");
+            $paymentAccomidation = $this->createPayment($user, $userPaymentCard, $booking->id, $booking->total_sum, "accommodation");
 
 
             try {
 
                 /*Отправка платежа за проживание в Kassa.com*/
-                $paymentService =  $this->paymentService->createPayment($request->total_sum, $paymentAccomidation->guid,
+                $paymentService =  $this->paymentService->createPayment($booking->total_sum, $paymentAccomidation->guid,
                     "Оплата брони №".$booking->id." в приложений MANICA.kz",
                     $userPaymentCard->subscription_token);
 
@@ -204,8 +209,8 @@ class BookingController extends Controller
 
             /*Отправка в 1с*/
             $this->integrationService->createBooking($booking, $user);
-            $this->integrationService->createPayment($booking, $user,"depozit" ,$request->deposit, $paymentDepozit->guid);
-            $this->integrationService->createPayment($booking, $user,"accommodation" ,$request->total_sum, $paymentAccomidation->guid);
+            $this->integrationService->createPayment($booking, $user,"depozit" ,$booking->deposit, $paymentDepozit->guid);
+            $this->integrationService->createPayment($booking, $user,"accommodation" ,$booking->total_sum, $paymentAccomidation->guid);
             $apartment->setBooked();
 
             DB::commit();
@@ -219,6 +224,27 @@ class BookingController extends Controller
                 'message'=>$exception->getMessage()
             ], 400);
         }
+
+    }
+
+    public function calculateBookingPrice(Request $request){
+        $validator = Validator::make($request->all(), [
+            'apartment_id' => 'required | exists:apartments,id',
+            'entry_date' => 'required',
+            'departure_date' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success'=>false,
+                'message'=>$validator->errors()
+            ]);
+        }
+        return response()->json([
+            'success'=>true,
+            'data'=> $this->payment_details($request->apartment_id, $request->entry_date, $request->departure_date,
+                $request->is_late_departure)
+        ]);
 
     }
 
@@ -250,13 +276,13 @@ class BookingController extends Controller
 
             $deposit = Payment::where('booking_id', $booking->id)
                 ->where('paymentType', '=','depozit')->paid()->first();
-            $total_sum = $this->calculateBookingSumForCancel($booking);
+
             if($payment && $deposit){
                 if(!empty($payment->payment_token) && !empty($deposit->payment_token)){
                     try {
-                        $this->paymentService->refundPayment($payment->payment_token,$booking->id,
-                            $booking->getPaymentMethodId(),
-                            $total_sum, 'Отмена брони №'. $booking->id);
+//                        $this->paymentService->refundPayment($payment->payment_token,$booking->id,
+//                            $booking->getPaymentMethodId(),
+//                            $total_sum, 'Отмена брони №'. $booking->id);
 
                         $this->paymentService->refundPayment($deposit->payment_token,$booking->id,
                             $booking->getPaymentMethodId(),
@@ -345,7 +371,6 @@ class BookingController extends Controller
 
         try {
             $booking = Booking::find($request->booking_id);
-            print_r($booking->payments);
             return new BookingDetailResource($booking);
 
         }catch (\Exception $exception){
@@ -363,7 +388,6 @@ class BookingController extends Controller
         $validator = Validator::make($request->all(), [
             'booking_id' => 'required | exists:bookings,id',
             'new_departure_datetime' => 'required|after:'.Carbon::now()->format('Y-m-d H:i:s'),
-            'total_sum' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -381,6 +405,7 @@ class BookingController extends Controller
 
         $user = Auth::user();
         $booking = Booking::find($request->booking_id);
+        $total_sum = $booking->calculateForRenewal($request->new_departure_datetime, $request->boolean('is_late_departure'));
         $payment = Payment::where('booking_id', $booking->id)->where('status','=' ,'PROCESS')->first();
 
         if($payment){
@@ -395,9 +420,9 @@ class BookingController extends Controller
             $user = User::find($user->id);
             $userPaymentCard = $user->payment_cards->where('is_main','=','1')->first();
             //Создаем локальный платеж
-            $payment = $this->createPayment($user, $userPaymentCard, $booking->id, $request->total_sum,"accommodation");
+            $payment = $this->createPayment($user, $userPaymentCard, $booking->id,  $total_sum,"accommodation");
             //Создаем платеж на стороне kassa.com
-            $paymentService =  $this->paymentService->createPayment($request->total_sum, $payment->id,
+            $paymentService =  $this->paymentService->createPayment($total_sum, $payment->id,
                 "Оплата продлений брони №".$booking->id." в приложений MANICA.kz",
                 $userPaymentCard->subscription_token);
             $payment->setToken($paymentService['token']);

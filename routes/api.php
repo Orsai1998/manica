@@ -48,6 +48,7 @@ Route::middleware('auth:sanctum')->group(function(){
         Route::post('/detail',  [App\Http\Controllers\BookingController::class, 'getBookingDetail']);
         Route::post('/renewal',  [App\Http\Controllers\BookingController::class, 'renewalBooking']);
         Route::post('/cancel',  [App\Http\Controllers\BookingController::class, 'cancelBooking']);
+        Route::post('/calculate',  [App\Http\Controllers\BookingController::class, 'calculateBookingPrice']);
     });
     Route::group(['prefix'=>'company_info'], function(){
         Route::post('/create',  [App\Http\Controllers\CompanyInfoController::class, 'create']);

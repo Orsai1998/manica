@@ -57,6 +57,15 @@ class SignUpController extends Controller
             return response()->json(['message' => $exception->getMessage()], 500);
         }
 
+       /* $now = now();
+
+        if($userOtp && $now->isBefore($userOtp->expire_at)){
+            return response()->json([
+                'success' => 'true',
+                'message'=> 'Код отправлен '
+            ]);
+        }*/
+
         $userOtp->sendSMS($request->phone_number);
 
         return response()->json([
@@ -68,8 +77,14 @@ class SignUpController extends Controller
 
     public function generateOtp($phone_number)
     {
+        $userOtp = VerificationCode::where('phone_number', $phone_number)->latest()->first();
 
         $now = now();
+
+        if($userOtp && $now->isBefore($userOtp->expire_at)){
+            return $userOtp;
+        }
+
 
         return VerificationCode::create([
             'user_id' => 0,
@@ -86,6 +101,7 @@ class SignUpController extends Controller
             'code' => 'required'
         ]);
 
+
         if ($validator->fails()) {
             return response()->json([
                 'success'=>false,
@@ -96,6 +112,12 @@ class SignUpController extends Controller
         $user = VerificationCode::where('phone_number', $request->phone_number)
             ->where('code', $request->code)
             ->first();
+        if(!$user){
+            return response()->json([
+                'success'=>false,
+                'message' => 'Invalid OTP'
+            ], 400);
+        }
         $now = now();
         if (!$now->isBefore($user->expire_at)) {
             return response()->json([
@@ -128,7 +150,7 @@ class SignUpController extends Controller
                 'password' => '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
                 'remember_token' => Str::random(10),
             ]);
-            $this->integrationService->createUpdateUser($user);
+
             DB::commit();
         }catch (\Exception $exception){
             DB::rollBack();

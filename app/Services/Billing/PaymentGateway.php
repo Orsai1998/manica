@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use function config;
 
@@ -79,6 +80,7 @@ class PaymentGateway
     }
 
     public function createPayment($amount, $orderId, $description = "", $subscription_token = "", $payment_reason = "accommodation"){
+        $user = Auth::user();
 
         $requestArray = [
             "partner_payment_id" => $orderId,
@@ -92,16 +94,21 @@ class PaymentGateway
                 "project_id" => "4027",
                 "payment_method" => "card",
                 'wallet_id' => 8413,
+                "success_url" =>URL::to('/payment/success'),
+                "fail_url"=> URL::to('/payment/fail'),
                 'create_subscription' => true,
-                'is_test' => true,
+                'capture' => false,
+                'is_test' => false,
                 'notification_url' => 'https://hh.foxstudy.kz/api/payment_response',
             ],
             'custom_parameters' => [
                 "order_id" => $orderId,
+                "user_id" => $user->id,
                 "payment_reason" => $payment_reason
             ],
         ];
-
+        info("===========CREATE PAYMENT=================");
+        info($requestArray);
         if(!empty($subscription_token)){
             $requestArray['settings']['subscription_token'] = $subscription_token;
         }
@@ -116,7 +123,8 @@ class PaymentGateway
             DB::commit();
             return [
                 'ip' => $createPaymentResponse['ip'],
-                'token' => $createPaymentResponse['token']
+                'token' => $createPaymentResponse['token'],
+                'payment_url' => $createPaymentResponse['payment_url'] ?? ""
             ];
 
         } catch (\Exception $e) {
@@ -205,9 +213,9 @@ class PaymentGateway
         }
     }
 
-    public function savePaymentMethod(array $paymentMethod, String $subscription_token, String $token, String $status, PaymentGateway $paymentService){
+    public function savePaymentMethod($user_id,array $paymentMethod, String $subscription_token, String $token, String $status, PaymentGateway $paymentService){
 
-        $user = Auth::user();
+        $user = User::find($user_id);
         if($user){
             DB::beginTransaction();
             try {
@@ -215,7 +223,6 @@ class PaymentGateway
                     ->where('user_id', $user->id)->first();
 
                 if($userPayment){
-                    //$this->paymentService->refundPayment($token,0,0,10, "Отмена покупки");
                     throw new \Exception('Такой метод оплаты уже существует');
                 }
                 $userPayment = new UserPaymentCard();
@@ -241,8 +248,8 @@ class PaymentGateway
                 DB::commit();
 
             }catch (\Exception $exception){
-                Log::error($exception);
                 DB::rollBack();
+                Log::error($exception);
                 throw new \Exception($exception->getMessage(). " ".$exception->getCode());
             }
         }

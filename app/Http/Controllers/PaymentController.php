@@ -18,9 +18,19 @@ class PaymentController extends Controller
     }
 
     public function paymentResponse(Request $request){
-
+        info("===========REQUEST===========");
+        info($request->all());
 
         if($request->notification_type == 'check'){
+            info("===================CHECK==========================");
+            info($request->all());
+            return response()->json([
+                'status' => 'ok'
+            ]);
+        }
+        if($request->notification_type == 'wait_capture'){
+            info("===================WAIT==========================");
+            info($request->all());
             return response()->json([
                 'status' => 'ok'
             ]);
@@ -37,30 +47,44 @@ class PaymentController extends Controller
                   $customParameters = $request->custom_parameters;
                   if(!empty($customParameters)){
                       if($customParameters['payment_reason'] == 'add_card'){
-                          $this->paymentService->savePaymentMethod($request->payment_method, $request->subscription['token'], $request->token, $request->status, $this->paymentService);
+                          $this->paymentService->savePaymentMethod($customParameters['user_id'],
+                              $request->payment_method, $request->subscription['token'], $request->token,
+                              $request->status, $this->paymentService);
                       }
                   }
                 $payment->setSuccessStatus();
             }
+            return response()->json([
+                'status' => 'ok'
+            ]);
         }
         if($request->notification_type == 'error'){
             info('ERROR');
             info($request);
             $customParameters = $request->custom_parameters;
             if(!empty($customParameters)){
-                if($customParameters['payment_reason'] == 'add_card'){
-                    $this->paymentService->savePaymentMethod($request->payment_method, $request->subscription['token'], $request->token, $request->status, $this->paymentService);
-                }
+//                if($customParameters['payment_reason'] == 'add_card'){
+//                    $this->paymentService->savePaymentMethod($customParameters['user_id'],
+//                        $request->payment_method, $request->subscription['token'], $request->token,
+//                        $request->status, $this->paymentService);
+//                }
                 $payment->setErrorStatus();
             }
 
             return response()->json([
                 'status' => 'error',
-                "message" => $request->status_description
+                "message" => htmlentities($request->status_description)
             ]);
         }
 
     }
 
+    public function success(){
+        return view('payment.success');
+    }
+
+    public function fail(){
+        return view('payment.fail');
+    }
 
 }

@@ -3,15 +3,17 @@
 namespace App\Models;
 
 use App\Http\Resources\UserPaymentCardResource;
+use App\Traits\BookingTrait;
 use Carbon\Carbon;
 use DateTime;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\DB;
 
 class Booking extends Model
 {
-    use HasFactory;
+    use HasFactory, BookingTrait;
     protected $guarded = [];
 
 
@@ -28,6 +30,30 @@ class Booking extends Model
     public function setApartmentAvailable(){
         $this->apartments->is_available = 1;
         $this->apartments->save();
+    }
+
+    public function calculateTotalSum(){
+        $apartment_price = $this->payment_details($this->apartment_id, $this->entry_date, $this->departure_date, false);
+        $accommodation_price = 0;
+        info($apartment_price);
+        foreach ($apartment_price as $item){
+            if($item['type'] == 'accommodation'){
+                $accommodation_price = $item['price'];
+            }
+        }
+        $deposit = config('services.deposit');
+
+        $this->total_sum = $accommodation_price;
+        $this->deposit = $deposit;
+        $this->save();
+
+    }
+
+
+    public function numberOfNights(){
+        $date1 = Carbon::parse($this->entry_date);
+        $date2 = Carbon::parse($this->departure_date);
+        return $date2->diff($date1)->format("%a");
     }
 
     public function payments(){
