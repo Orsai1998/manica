@@ -48,7 +48,8 @@ class ProcessPaymentsCard implements ShouldQueue
                     $this->paymentCard->save();
 
                     try {
-                        $this->paymentService->refundPayment($this->payment->payment_token,0 ,0,10, "Отмена покупки");
+                        $this->paymentService->refundPayment($this->payment->user_id,
+                            $this->payment->id,$this->payment->payment_token,0 ,0,10, "Отмена покупки");
                     }
                     catch (\Exception $exception){
                         $this->release(now()->addMinutes(3));

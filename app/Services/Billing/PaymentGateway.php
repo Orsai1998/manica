@@ -99,7 +99,7 @@ class PaymentGateway
                 'create_subscription' => true,
                 'capture' => false,
                 'is_test' => false,
-                'notification_url' => 'https://hh.foxstudy.kz/api/payment_response',
+                'notification_url' => URL::to('/api/payment_response'),
             ],
             'custom_parameters' => [
                 "order_id" => $orderId,
@@ -157,8 +157,8 @@ class PaymentGateway
     }
 
 
-    public function refundPayment(String $token, $external_id,$user_card_id, String $amount, String $description){
-        $user = User::find(Auth::user()->id);
+    public function refundPayment($user_id,String $token, $external_id,$user_card_id, String $amount, String $description){
+        $user = User::find($user_id);
         $requestArray = [
             'token' => $token,
             'refund' => [
@@ -223,6 +223,7 @@ class PaymentGateway
                     ->where('user_id', $user->id)->first();
 
                 if($userPayment){
+                    $paymentService->refundPayment($user_id,$token,0 ,0,10, "Отмена покупки");
                     throw new \Exception('Такой метод оплаты уже существует');
                 }
                 $userPayment = new UserPaymentCard();
@@ -241,9 +242,9 @@ class PaymentGateway
                 $payment->save();
                 ProcessPaymentsCard::dispatch($paymentService, $payment,$userPayment);
 //                //Возврат суммы после привязки карты
-//                if($status == 'success'){
-//                    $this->paymentService->refundPayment($token,0 ,0,10, "Отмена покупки");
-//                }
+              if($status == 'successful'){
+                  $paymentService->refundPayment($user_id,$token,0 ,0,10, "Отмена покупки");
+               }
 
                 DB::commit();
 

@@ -284,7 +284,7 @@ class BookingController extends Controller
 //                            $booking->getPaymentMethodId(),
 //                            $total_sum, 'Отмена брони №'. $booking->id);
 
-                        $this->paymentService->refundPayment($deposit->payment_token,$booking->id,
+                        $this->paymentService->refundPayment($user->id,$deposit->payment_token,$booking->id,
                             $booking->getPaymentMethodId(),
                             $deposit->total_sum, 'Отмена депозита №'. $booking->id);
 

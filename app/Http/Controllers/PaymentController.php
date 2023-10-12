@@ -28,6 +28,13 @@ class PaymentController extends Controller
                 'status' => 'ok'
             ]);
         }
+        if($request->status == "wait_capture"){
+            info("===================WAIT CAPTURE==========================");
+            info($request->all());
+            return response()->json([
+                'status' => 'ok'
+            ]);
+        }
         if($request->notification_type == 'wait_capture'){
             info("===================WAIT==========================");
             info($request->all());

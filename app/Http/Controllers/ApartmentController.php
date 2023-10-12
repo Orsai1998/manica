@@ -112,7 +112,8 @@ class ApartmentController extends Controller
                 $join->whereBetween('apartment_prices.price',[$minPrice, $maxPrice]);
                 $join->whereBetween('apartment_prices.date',[$startDate,$endDate]);
                 //$join->whereNotNull('apartment_price_intervals.end_date');
-        })->Join('apartment_availability' , function ($join) use ($minPrice, $maxPrice, $startDate, $endDate) {
+        })
+            ->Join('apartment_availability' , function ($join) use ($minPrice, $maxPrice, $startDate, $endDate) {
                 $join->on('apartments.id','=','apartment_availability.apartment_id');
                 $join->where('apartment_availability.state','=', 1);
                 $join->whereDate('apartment_availability.start_date','<=',$startDate);
