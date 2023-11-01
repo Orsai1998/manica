@@ -7,10 +7,12 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\UserDocument;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -20,6 +22,7 @@ class IntegrationOneCService
     protected $username;
     protected $password;
     protected $client;
+    protected $customer_email;
 
 
     public function __construct()
@@ -27,6 +30,7 @@ class IntegrationOneCService
         $this->url = config('services.one_c.url');
         $this->username = config('services.one_c.username');
         $this->password = config('services.one_c.password');
+        $this->customer_email = config('services.customer_email');
     }
 
     protected function makeRequest(string $uri, array $params = [], $isAuthRequired = false)
@@ -127,6 +131,7 @@ class IntegrationOneCService
             }
             $user->one_c_guid =  $response['GUID'];
             $user->save();
+            $this->sendUserCreatedEmail($user);
             //$this->sendUserDocuments($user);
 
 
@@ -147,8 +152,8 @@ class IntegrationOneCService
                 "phoneNumber" => $user->phone_number
             ],
              "apartmentID" =>  $booking->apartments->GUID,
-             "checkIn" =>  $booking->entry_date,
-             "checkOut" =>  $booking->departure_date,
+             "checkIn" =>  $booking->getEntryDate(),
+             "checkOut" =>   $booking->getDepartureDate(),
              "note" =>  "Бронь №".$booking->id,
         ];
 
@@ -163,6 +168,7 @@ class IntegrationOneCService
             }
             $booking->one_c_guid = $response['GUID'];
             $booking->save();
+            $this->sendBookingCreatedEmail($booking);
 
         }catch (\Exception $exception){
             Log::error($exception);
@@ -212,8 +218,8 @@ class IntegrationOneCService
             ],
             "apartmentID" =>  $booking->apartments->GUID,
             "reservationId" => $booking->one_c_guid,
-            "checkIn" => $booking->entry_date,
-            "checkOut" =>  $booking->departure_date,
+            "checkIn" =>  $booking->getEntryDate(),
+            "checkOut" =>   $booking->getDepartureDate(),
             "note" =>  "Изменение брони №".$booking->id,
         ];
 
@@ -268,6 +274,29 @@ class IntegrationOneCService
                 throw new \Exception($exception->getMessage());
             }
         }
+    }
+
+
+    public function sendBookingCreatedEmail(Booking $booking){
+        $details = [
+            'residential_complex_name' => $booking->apartments->residential_complex->name,
+            'flat_number' => $booking->apartments->flat,
+            'total_sum' =>  number_format($booking->total_sum, 2),
+            'start_date' =>  $booking->getEntryDate(),
+            'end_date' =>  $booking->getDepartureDate(),
+            'client_name' => $booking->user->name,
+            'client_phone' => $booking->user->phone_number
+        ];
+        Mail::to($this->customer_email)->send(new \App\Mail\BookingCreatedMail($details));
+    }
+
+    public function sendUserCreatedEmail(User $user){
+        $details = [
+            'client_name' => $user->name,
+            'client_phone' => $user->phone_number,
+
+        ];
+        Mail::to($this->customer_email)->send(new \App\Mail\UserCreatedMail($details));
     }
 
 

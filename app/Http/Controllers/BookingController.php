@@ -6,6 +6,7 @@ use App\Http\Resources\BookingDetailResource;
 use App\Http\Resources\UserBookingsResource;
 use App\Jobs\ProcessPayment;
 use App\Models\Apartment;
+use App\Models\ApartmentPrice;
 use App\Models\Booking;
 use App\Models\CompanyInfo;
 use App\Models\Payment;
@@ -64,7 +65,9 @@ class BookingController extends Controller
         $request->merge(['user_id' => $user->id]);
         $request->merge(['status' => 'PENDING']);
         $booking = Booking::create($request->all());
+        $booking->setEntryDepartureDateTimes();
         $booking->calculateTotalSum();
+
         return response()->json([
             'success'=>true,
             'data'=> new BookingDetailResource($booking)
@@ -95,15 +98,9 @@ class BookingController extends Controller
         if($request->deposit == 0){
             $request->deposit = $this->deposit_sum;
         }
-        $request->entry_date = Carbon::create($request->entry_date);
-        $request->entry_date->hour = 12;
-        $request->departure_date = Carbon::create($request->departure_date);
-        $request->departure_date->hour = 12;
 
-        if($request->is_late_departure){
-            $request->departure_date = Carbon::create($request->departure_date);
-            $request->departure_date->hour = 18;
-        }
+
+
 
         if($request->is_business_trip_reservation){
             $company =  CompanyInfo::where('user_id', $user->id)->first();
@@ -132,6 +129,10 @@ class BookingController extends Controller
             $payment = Payment::where('booking_id', $booking->id)->where('status','=' ,'PROCESS')->first();
             $apartment = Apartment::find($booking->apartment_id);
 
+            if($request->is_late_departure){
+                $booking->setLateDepartureTime();
+            }
+
             if(!$apartment->is_available){
                 return response()->json([
                     'success'=>false,
@@ -147,7 +148,8 @@ class BookingController extends Controller
             }
             $user = User::find($user->id);
             $booking->update($request->all());
-
+            $booking->setEntryDepartureDateTimes();
+            DB::commit();
             $paymentDepozit = $this->createPayment($user, $userPaymentCard, $booking->id, $booking->deposit, "depozit");
             $paymentAccomidation = $this->createPayment($user, $userPaymentCard, $booking->id, $booking->total_sum, "accommodation");
 
@@ -182,7 +184,7 @@ class BookingController extends Controller
                     ProcessPayment::dispatch($this->paymentService, $paymentAccomidation);
                 }
 
-                $paymentService =  $this->paymentService->createPayment($request->deposit, $paymentDepozit->guid,
+                $paymentService =  $this->paymentService->createPayment($booking->deposit, $paymentDepozit->guid,
                     "Оплата депозита брони №".$booking->id." в приложений MANICA.kz",
                     $userPaymentCard->subscription_token);
 
@@ -191,6 +193,7 @@ class BookingController extends Controller
                 }
                 $paymentDepozit->setToken($paymentService['token']);
                 $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
+                DB::commit();
             }catch (\Exception $exception){
                 DB::rollback();
                 return response()->json([
@@ -265,24 +268,34 @@ class BookingController extends Controller
         DB::beginTransaction();
         try {
             $booking = Booking::where('id', $request->booking_id)->where('user_id', $user->id)->first();
-           if(!$booking){
-               return response()->json([
-                   'success'=>false,
-                   'message'=>'Ваша бронь не найдена',
-               ]);
-           }
-            $payment = Payment::where('booking_id', $booking->id)
-                ->where('paymentType', '=','accommodation')->paid()->first();
+            if(!$booking){
+                return response()->json([
+                    'success'=>false,
+                    'message'=>'Ваша бронь не найдена',
+                ]);
+            }
+            $payments = Payment::where('booking_id', $booking->id)
+                ->where('paymentType', '=','accommodation')->paid()->get();
 
             $deposit = Payment::where('booking_id', $booking->id)
                 ->where('paymentType', '=','depozit')->paid()->first();
 
-            if($payment && $deposit){
-                if(!empty($payment->payment_token) && !empty($deposit->payment_token)){
+            $penalty = ApartmentPrice::where('apartment_id', $booking->apartment_id)
+                ->where('date', $booking->entry_date)
+                ->first()->price;
+
+            if($payments && $deposit){
+                if($payments->count() > 0 && !empty($deposit->payment_token)){
                     try {
-//                        $this->paymentService->refundPayment($payment->payment_token,$booking->id,
-//                            $booking->getPaymentMethodId(),
-//                            $total_sum, 'Отмена брони №'. $booking->id);
+                        foreach ($payments as $payment) {
+                            $total_sum = $payment->total_sum - $penalty;
+                            if ($total_sum > 0) {
+                                $this->paymentService->refundPayment($user->id, $payment->payment_token,$booking->id,
+                                    $booking->getPaymentMethodId(),
+                                    $total_sum, 'Отмена брони №'. $booking->id);
+                            }
+                            $penalty = 0;
+                        }
 
                         $this->paymentService->refundPayment($user->id,$deposit->payment_token,$booking->id,
                             $booking->getPaymentMethodId(),
@@ -293,7 +306,9 @@ class BookingController extends Controller
                     }
                 }
 
-                $payment->setCanceled();
+                foreach ($payments as $payment) {
+                    $payment->setCanceled();
+                }
                 $deposit->setCanceled();
                 $booking->setCanceled();
 

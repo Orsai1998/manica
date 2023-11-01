@@ -143,6 +143,7 @@ class ApartmentController extends Controller
         if($forMap){
             $apartment = Apartment::whereIn('id', $apartments)->withAvg('feedbacks','rate')->get();
         }
+        $apartment->date = $startDate;
         return ApartmentResource::collection($apartment);
     }
 
@@ -293,7 +294,7 @@ class ApartmentController extends Controller
 
     public function getFavoriteApartments(Request  $request){
         $user = Auth::user();
-
+        $request->merge(['start_date' => now()->format("Y-m-d")]);
         $apartments = Apartment::whereHas('favorites', function($q) use($user){
             $q->where('user_id', $user->id);
         })->get();

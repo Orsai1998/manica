@@ -117,4 +117,11 @@ class Apartment extends Model
     public function prices(){
         return $this->belongsTo(ApartmentPrice::class,'id', 'apartment_id');
     }
+
+    public function getPriceForSpecificDate($date){
+        $price =  $this->prices()->where('date', $date)->first();
+        if($price){
+            return $price->price;
+        }
+    }
 }

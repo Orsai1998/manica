@@ -13,6 +13,7 @@ use App\Traits\UserExtension;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -57,14 +58,14 @@ class SignUpController extends Controller
             return response()->json(['message' => $exception->getMessage()], 500);
         }
 
-       /* $now = now();
+        $now = now();
 
         if($userOtp && $now->isBefore($userOtp->expire_at)){
             return response()->json([
                 'success' => 'true',
                 'message'=> 'Код отправлен '
             ]);
-        }*/
+        }
 
         $userOtp->sendSMS($request->phone_number);
 
@@ -90,7 +91,7 @@ class SignUpController extends Controller
             'user_id' => 0,
             'phone_number' => $phone_number,
             'code' => rand(1234, 9999),
-            'expire_at' => $now->addMinutes(5)
+            'expire_at' => $now->addMinutes(2)
         ]);
     }
 
@@ -214,7 +215,7 @@ class SignUpController extends Controller
 
             if(empty($user->one_c_guid)){
                 $this->integrationService->createUpdateUser($client);
-                //SendUserDocuments::dispatch($user, $this->integrationService);
+                Artisan::command('send:document');
             }
 
 

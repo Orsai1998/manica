@@ -12,6 +12,7 @@ class ApartmentResource extends JsonResource
      * @param  \Illuminate\Http\Request  $request
      * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
      */
+
     public function toArray($request)
     {
         return [
@@ -24,7 +25,7 @@ class ApartmentResource extends JsonResource
             'latitude' => $this->latitude,
             'flat_number' => $this->flat,
             'floor' => $this->floor,
-            'price' => $this->prices->price ?? '',
+            'price' => $this->getPriceForSpecificDate($request->input('start_date')) ?? '',
             'is_favourite' => $this->is_favorite(),
             'rate' => $this->feedbacks_avg_rate
         ];

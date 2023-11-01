@@ -13,8 +13,10 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
+Route::get('/', function (\App\Services\IntegrationOneCService  $service) {
+    $booking = \App\Models\User::latest()->first();
+    $service->sendUserCreatedEmail($booking);
+    return "Sent";
 });
 
 Route::get('payment/success', [App\Http\Controllers\PaymentController::class, 'success']);

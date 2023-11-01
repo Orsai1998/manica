@@ -31,13 +31,13 @@ class AuthController extends Controller
 
         try {
             $userOtp = $this->generateOtp($request->phone_number);
-        /*    $now = now();
+            $now = now();
             if($userOtp && $now->isBefore($userOtp->expire_at)){
                 return response()->json([
                     'success' => 'true',
                     'message'=> 'Код отправлен '
                 ]);
-            } */
+            }
             $userOtp->sendSMS($request->phone_number);
 
             return response()->json([
@@ -73,7 +73,7 @@ class AuthController extends Controller
                 'user_id' => $user->id,
                 'phone_number' => $phone_number,
                 'code' => rand(1000, 9999),
-                'expire_at' => $now->addMinutes(10)
+                'expire_at' => $now->addMinutes(2)
             ]);
         }catch (\Exception $exception){
             throw new \Exception($exception->getMessage());

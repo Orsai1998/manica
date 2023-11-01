@@ -37,6 +37,7 @@ return [
         'process_payment_url' => env('INTERPAY_PROCESS_PAYMENT_URL', '18D33336-6D5A-4F00-804B-170FB11FE160'),
     ],
     'deposit' => '20000',
+    'customer_email' => 'korsayev@gmail.com',
     'one_c' => [
         'url' => env('one_c_url', 'http://rhouse.keenetic.pro:7071/all_bases/hs/mobiApi'),
         'username' => env('one_c_username', 'mobiApi'),

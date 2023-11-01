@@ -20,11 +20,33 @@ class Booking extends Model
     public function apartments(){
         return $this->hasOne(Apartment::class,'id','apartment_id');
     }
+    public function user(){
+        return $this->belongsTo(User::class,'user_id', 'id');
+    }
     public function setCanceled(){
         $this->status ='CANCELED';
         $this->save();
         $this->setApartmentAvailable();
 
+    }
+
+    public function setEntryDepartureDateTimes(){
+        $this->entry_date = $this->entry_date. " 12:00:00";
+        $this->departure_date = $this->departure_date. " 12:00:00";
+        $this->save();
+    }
+
+    public function setLateDepartureTime(){
+        $this->departure_date = $this->departure_date. " 18:00:00";
+        $this->save();
+    }
+
+    public function getEntryDate(){
+        return Carbon::createFromDate($this->entry_date)->format("Y-m-d H:i:s");
+    }
+
+    public function getDepartureDate(){
+        return Carbon::createFromDate($this->departure_date)->format("Y-m-d H:i:s");
     }
 
     public function setApartmentAvailable(){
@@ -35,7 +57,6 @@ class Booking extends Model
     public function calculateTotalSum(){
         $apartment_price = $this->payment_details($this->apartment_id, $this->entry_date, $this->departure_date, false);
         $accommodation_price = 0;
-        info($apartment_price);
         foreach ($apartment_price as $item){
             if($item['type'] == 'accommodation'){
                 $accommodation_price = $item['price'];
@@ -57,7 +78,7 @@ class Booking extends Model
     }
 
     public function payments(){
-        return $this->belongsTo("App\Models\Payment", "booking1121212_id", "id");
+        return $this->belongsTo("App\Models\Payment", "booking_id", "id");
     }
     public function getPaymentMethod(){
 

@@ -32,19 +32,23 @@ trait BookingTrait
     }
 
     public function payment_details($apartment_id, $start_date, $end_date, $is_late_departure = false){
+
         $payment_details = [];
-        $end_date = Carbon::createFromDate($end_date)->subDay();
+        $start_date = Carbon::createFromDate($start_date)->timezone(config('app.timezone'));
+        $end_date = Carbon::createFromDate($end_date)->timezone(config('app.timezone'));
+
         $apartment_price = ApartmentPrice::select('price', DB::raw('count(*) as total'))
             ->where('apartment_id', $apartment_id)->
-            whereBetween('date',[$start_date, $end_date])
+            whereDate('date','>=',$start_date)->
+            whereDate('date','<', $end_date)
             ->groupBy('price')
             ->pluck('total','price')
             ->toArray();
+
         $price = 0;
         $name = "";
 
         $apartment_price_for_late = 0;
-
         if($is_late_departure){
             $apartment_price_for_late = ApartmentPrice::where('apartment_id', $apartment_id)
                 ->whereDate('date',$end_date)->first();

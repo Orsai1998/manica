@@ -17,8 +17,6 @@ class IntegrationController extends Controller
 {
     public function createApartmentPrices(Request $request){
         info("=======PRICES==========");
-        info($request->all());
-
         $validator = Validator::make($request->all(), [
             '*.GUID' => 'required',
             '*.priceList' => 'required',
@@ -99,13 +97,16 @@ class IntegrationController extends Controller
                 }else{
                     if(!empty($item['states'])){
 
-                        foreach($item['states'] as $price){
-
-                            ApartmentState::create([
-                                'apartment_id' => $apartment->id,
-                                'state' => $price['state'],
-                                'date' => $price['period'],
-                            ]);
+                        foreach($item['states'] as $state){
+                            $apartment_state = ApartmentState::where('date', $state['period'])
+                                ->where('apartment_id',$apartment->id)->first();
+                            if(!$apartment_state){
+                                $apartment_state = new ApartmentState();
+                            }
+                            $apartment_state->apartment_id = $apartment->id;
+                            $apartment_state->state = $state['state'];
+                            $apartment_state->date = $state['period'];
+                            $apartment_state->save();
                         }
                     }else{
                         Log::error('Apartment with GUID '.$item['GUID']. ' was with empty price list');
