@@ -9,7 +9,9 @@ use App\Http\Resources\ApartmentTypeResource;
 use App\Http\Resources\LivingConditionResource;
 use App\Http\Resources\ResidentialComplexResource;
 use App\Models\Apartment;
+use App\Models\ApartmentAvailability;
 use App\Models\ApartmentFeedback;
+use App\Models\ApartmentState;
 use App\Models\ApartmentType;
 use App\Models\Faq;
 use App\Models\FavoriteApartment;
@@ -82,7 +84,7 @@ class ApartmentController extends Controller
         if(!$sortBy){
             $minPrice = 1000;
             $maxPrice = 1000000;
-            $sortBy = 'apartment_prices.price';
+            $sortBy = 'apartments.is_available';
         }
         if($sortBy == 'price'){
             $sortBy = 'apartment_prices.price';
@@ -292,6 +294,39 @@ class ApartmentController extends Controller
         }
     }
 
+    public function getBookedAndAvailableDates(Request $request){
+
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+        $apartment_id = $request->apartment_id;
+
+        $dates = [];
+        $apartment_availabilities = ApartmentState::where('apartment_id', $apartment_id)
+            ->whereDate('date','>=', $startDate)
+            ->where('apartment_id','=', $apartment_id)
+            ->whereDate('date','<=', $endDate)->get();
+
+        if($apartment_availabilities){
+            foreach ($apartment_availabilities as $data){
+                $dates[] = [
+                    'date' => $data->date,
+                    'state' => $data->state
+                ];
+            }
+        }
+
+
+        $item = [
+            'apartment_id' => $apartment_id,
+            'dates' => $dates
+        ];
+
+        return response()->json([
+           'success' => true,
+           'data' => $item
+        ]);
+
+    }
     public function getFavoriteApartments(Request  $request){
         $user = Auth::user();
         $request->merge(['start_date' => now()->format("Y-m-d")]);

@@ -27,6 +27,7 @@ class ApartmentResource extends JsonResource
             'floor' => $this->floor,
             'price' => $this->getPriceForSpecificDate($request->input('start_date')) ?? '',
             'is_favourite' => $this->is_favorite(),
+            'is_available' => $this->is_available,
             'rate' => $this->feedbacks_avg_rate
         ];
     }

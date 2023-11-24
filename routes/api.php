@@ -66,6 +66,7 @@ Route::get('/common/docs',  [App\Http\Controllers\CommonController::class, 'getO
 
 Route::get('/apartment',  [App\Http\Controllers\ApartmentController::class, 'getApartmentInfo']);
 Route::get('/apartment_feedbacks',  [App\Http\Controllers\ApartmentController::class, 'getMoreFeedbacks']);
+Route::get('/get_apartment_dates',  [App\Http\Controllers\ApartmentController::class, 'getBookedAndAvailableDates']);
 
 Route::group(['prefix'=>'filter'], function(){
 
