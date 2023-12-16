@@ -35,6 +35,7 @@ class ApartmentDetailResource extends JsonResource
             'description' => $this->description,
             'living_conditions' => LivingConditionResource::collection($this->living_conditions),
             'feedbacks' => ApartmentFeedbackResource::collection($this->feedbacks),
+            'address' => $this->address,
         ];
     }
 }
