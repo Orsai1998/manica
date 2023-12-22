@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\UserPaymentCard;
 use App\Services\Billing\PaymentGateway;
 use App\Services\IntegrationOneCService;
+use App\Services\LockService;
 use App\Traits\BookingTrait;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -29,11 +30,13 @@ class BookingController extends Controller
     use BookingTrait;
     protected $paymentService;
     protected $integrationService;
+    protected $lockService;
     protected $deposit_sum;
-    public function __construct(PaymentGateway $paymentService, IntegrationOneCService $integrationService)
+    public function __construct(PaymentGateway $paymentService, IntegrationOneCService $integrationService, LockService $lockService)
     {
         $this->paymentService = $paymentService;
         $this->integrationService = $integrationService;
+        $this->lockService = $lockService;
         $this->deposit_sum = config('services.deposit');
     }
 
@@ -86,6 +89,7 @@ class BookingController extends Controller
             'number_of_children' => 'required',
             'entry_date' => 'required',
             'departure_date' => 'required',
+            'source' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -191,6 +195,7 @@ class BookingController extends Controller
                 if(!$paymentService['token']){
                     throw new \Exception('Не присвоен токен платежа по проживанию');
                 }
+
                 $paymentDepozit->setToken($paymentService['token']);
                 $paymentInfo = $this->paymentService->getPaymentInfo($paymentService['token']);
                 DB::commit();
@@ -216,6 +221,7 @@ class BookingController extends Controller
             $this->integrationService->createPayment($booking, $user,"accommodation" ,$booking->total_sum, $paymentAccomidation->guid);
             $apartment->setBooked();
 
+            $this->lockService->passCode($apartment, $booking, $request->source);
             DB::commit();
             return response()->json(['success'=> true]);
 
@@ -281,7 +287,7 @@ class BookingController extends Controller
                 ->where('paymentType', '=','depozit')->paid()->first();
 
             $penalty = ApartmentPrice::where('apartment_id', $booking->apartment_id)
-                ->where('date', $booking->entry_date)
+                ->where('date', Carbon::create($booking->entry_date)->startOfDay())
                 ->first()->price;
 
             if($payments && $deposit){
@@ -360,11 +366,11 @@ class BookingController extends Controller
         $now = Carbon::now()->timezone('Asia/Dhaka')->format('Y-m-d');
         if($active == 1){
             $booking = Booking::where('user_id', $user->id)
-                ->whereDate('departure_date','>',$now)->where('status','!=', 'CANCELED')
+                ->whereDate('departure_date','>',$now)->where('status','!=', 'CANCELED')->where('status','!=', 'PENDING')
                 ->where('status','!=', 'error')->get();
         } else{
             $booking = Booking::where('user_id', $user->id)
-                ->whereDate('departure_date','<=',$now)->where('status','!=', 'CANCELED')
+                ->whereDate('departure_date','<=',$now)->where('status','!=', 'CANCELED')->where('status','!=', 'PENDING')
                 ->where('status','!=', 'error')->get();
         }
 

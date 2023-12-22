@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use function now;
 use function response;
+use Illuminate\Support\Facades\Hash;
+
 
 class SignUpController extends Controller
 {
@@ -33,14 +35,7 @@ class SignUpController extends Controller
     public function sendOtpToRegister(Request $request)
     {
 
-        $user = User::where('phone_number', $request->phone_number)->first();
 
-        if($user){
-            return response()->json([
-                'success'=>false,
-                'message'=>'Пользователь существует'
-            ]);
-        }
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required'
         ]);
@@ -134,8 +129,9 @@ class SignUpController extends Controller
         if($userPhone){
             if($userPhone->trashed()){
                 $userPhone->restore();
-                return $this->respondWithToken($userPhone->createToken('TOKEN')->plainTextToken);
             }
+
+            return $this->respondWithToken($userPhone->createToken('TOKEN')->plainTextToken);
         }
 
         DB::beginTransaction();
@@ -148,7 +144,7 @@ class SignUpController extends Controller
                 'email_verified_at' => now(),
                 'birth_date' => now(),
                 'role_id' => $role->id,
-                'password' => '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
+                'password' => Hash::make(Str::random(10)),
                 'remember_token' => Str::random(10),
             ]);
 
@@ -173,8 +169,6 @@ class SignUpController extends Controller
             'name' => 'required',
             'isFemale' => 'required',
             'birth_date' => 'required',
-            'front_ID' => 'required',
-            'back_ID' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -215,7 +209,7 @@ class SignUpController extends Controller
 
             if(empty($user->one_c_guid)){
                 $this->integrationService->createUpdateUser($client);
-                Artisan::command('send:document');
+                //Artisan::command('send:document');
             }
 
 

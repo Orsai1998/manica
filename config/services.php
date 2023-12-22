@@ -36,12 +36,16 @@ return [
         'create_payment_url' => env('INTERPAY_CREATE_PAYMENT_URL', '18D33336-6D5A-4F00-804B-170FB11FE160'),
         'process_payment_url' => env('INTERPAY_PROCESS_PAYMENT_URL', '18D33336-6D5A-4F00-804B-170FB11FE160'),
     ],
-    'deposit' => '20000',
-    'customer_email' => 'korsayev@gmail.com',
+    'deposit' => '20',
+    'customer_email' => 'Arenaa2012@mail.ru',
     'one_c' => [
         'url' => env('one_c_url', 'http://rhouse.keenetic.pro:7071/all_bases/hs/mobiApi'),
         'username' => env('one_c_username', 'mobiApi'),
         'password' => env('one_c_password', 'dHvSHX'),
+    ],
+    'lock' => [
+        'url' => env('LOCK_URL', 'https://automation.manica.kz/api/v1'),
+        'salt' => env('LOCK_SALT', '3b6064083432d1f4c78a26bdea04bd50602ac6c13b54b8f6fbbe5dd288bcf90635cdcb301272c48ae0e3f55d114a4451d6533e8489f2329e405a4b440e1ed73b'),
     ],
 
     'mobizone' => [
